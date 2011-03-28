@@ -1,0 +1,4 @@
+To install on a *nix system type:
+    sudo python setup.py install
+    
+You can also manually copy the django_url_framework folder to a directory that is in your python path.

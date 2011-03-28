@@ -1,0 +1,112 @@
+The django-url-framework will help you get your django applications done faster.
+
+It automatically detects urls in a django application, similar to the way Ruby on Rails does it with the Controller-Action-View implementation.
+
+Controllers are created in each django application with a predefined file naming scheme (*foo_controller.py*) and extending ActionController. The ActionController contains methods often used in a web context, and does common request-related processing.
+
+Each application can have multiple controllers thus allowing for smaller classes in a larger application.
+
+Each function not starting with an underscore becomes it's own action. By simply returning a dictionary from the action, it will be rendered with the template named using the *controller/action.html* naming scheme.
+
+Each action and controller can override certain global settings such as using a custom template name or giving the action (or controller) a custom name.
+
+== Add to your project ==
+
+*settings.py*
+{{{
+INSTALLED_APPS = (
+  ...,
+  'django_url_framework',
+  ...
+)
+}}}
+
+*urls.py*
+{{{
+import django_url_framework
+django_url_framework.site.autodiscover([r'^your_project_name'])
+
+urlpatterns = patterns('',
+    (r'^', include(django_url_framework.site.urls) ),
+)
+}}}
+
+
+==Example==
+
+===Folder structure===
+
+{{{
+project/
+  app/
+      cart_controller.py
+      foo_controller.py
+      templates/
+           cart/
+              index.html
+              remove.html
+           foo/
+              add.html
+              bar.html
+}}}
+
+
+*cart_controller.py* and *foo_controller.py*
+{{{
+class CartController(ActionController):
+   def add(self, id):
+      return {}
+   def remove(self, id)
+      return {}
+   def index(self):
+      return {}
+
+class FooController(ActionController):
+   def bar(self):
+      return {}
+}}}
+
+=== Result ===
+
+The following URLs will be created:
+
+{{{
+/cart/
+/cart/(\d+)
+/cart/add/
+/cart/add/(\d+)
+/cart/remove/
+/cart/remove/(\d+)
+/foo/bar/
+/foo/bar/(\d+)
+}}}
+
+You can easily access your URLs using django's built-in *url* tag. Simply call *{% url cart_index %}* or *{% url cart_delete id %}* and it will work as you would expect.
+
+There is also a helper tag for faster linking within the same controller.
+*{% go_action remove %}* will take you to */cart/remove/*. To use it, load *url_framework* in your templates.
+
+== Flash ==
+
+The ActionController also has a _flash instance variable that allows you to send messages to the user that can survive a redirect. Simply use 
+
+{{{
+    self._flash.append("Message")
+    
+    self._flash.error("Error message")
+}}}
+
+The flash messages can be either messages or error messages. The flash object is automatically exported into the context and you can use it as such:
+
+{{{
+    {% for message in flash.get_and_clear %}
+        <p class="{{message.type}}">{{message}}</p>
+    {% endfor %}
+}}}
+
+
+== Before and After each action ==
+
+You can override *`_`before_filter* and/or *`_`after_filter* to perform certain actions and checks before or after an action. Read more in ActionController docs.
+
+These methods accept the "request" parameter which is an HTTP request object for this request.

@@ -1,0 +1,22 @@
+VERSION = (0, 1, 'pre5')
+
+from django_url_framework.site import Site
+from django_url_framework.controller import ActionController
+from django_url_framework.exceptions import InvalidActionError
+from django_url_framework.exceptions import InvalidControllerError
+from django_url_framework.helper import ApplicationHelper
+
+
+def reraise(exception, info=None):
+    import sys
+    raise exception, None, sys.exc_info()[-1]
+
+# Dynamically calculate the version based on VERSION tuple
+if len(VERSION)>2 and VERSION[2] is not None:
+    str_version = "%d.%d_%s" % VERSION[:3]
+else:
+    str_version = "%d.%d" % VERSION[:2]
+
+__version__ = str_version
+
+site = Site()
