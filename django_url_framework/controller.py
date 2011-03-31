@@ -233,6 +233,9 @@ class ActionController(object):
         else:
             raise InvalidActionError()
 
+    def _has_action(self, action_name, with_prefix = False):
+        return (action_name in get_actions(action_name, with_prefix = with_prefix))
+        
     def _get_action_name(self, action_func, with_prefix = True):
         if not re.match(r'^[_\-A-Z0-9]',action_func.func_name[0]) and callable(action_func):
             if hasattr(action_func, 'action_name'):

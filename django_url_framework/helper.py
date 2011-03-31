@@ -1,4 +1,5 @@
 import urllib
+from django.core.urlresolvers import reverse
 from django_url_framework.exceptions import InvalidActionError
 from django_url_framework.exceptions import InvalidControllerError
 
@@ -10,11 +11,11 @@ class ApplicationHelper(object):
         self.controller = controller
     
     def url_for(self, *args, **kwargs):
-        from django.core.urlresolvers import reverse
+        from django_url_framework.controller import get_actions, get_controller_name
         
         controller_name = kwargs.pop('controller', self.controller._controller_name)
-        controller = self.controller._site.controllers.get(controller_name, None)
-        if controller is None:
+        Controller = self.controller._site.controllers.get(controller_name, None)
+        if Controller is None:
             raise InvalidControllerError(controller_name)
             
         if 'named_url' in kwargs:
@@ -22,13 +23,13 @@ class ApplicationHelper(object):
         elif 'action' in kwargs:
             action_name = kwargs.pop('action')
             try:
-                action_func = self.controller._actions_by_name[action_name]
+                action_func = get_actions(Controller,with_prefix=False)[action_name]
             except KeyError:
                 raise InvalidActionError(action_name)
                 
-            action_name = self.controller._get_action_name(action_func, with_prefix=False)
             named_url = getattr(action_func,'named_url',None)
             if named_url is None:
+                controller_name = get_controller_name(Controller, with_prefix=False)
                 named_url = '%s_%s' % (controller_name, action_name)
         else:
             named_url = controller_name
