@@ -1,5 +1,6 @@
 from django.conf import settings
 import hashlib
+from django.utils.safestring import mark_safe
 
 class FlashMessage(object):
     def __init__(self,message, is_error = False, kind = 'normal'):
@@ -11,10 +12,10 @@ class FlashMessage(object):
         return hashlib.sha1(u"%s|%s" % (self.message, self.kind)).hexdigest()
     
     def __repr__(self):
-        return self.message
+        return mark_safe(self.message)
 
     def __str__(self):
-        return self.message
+        return mark_safe(self.message)
 
 class FlashManager(object):
     SESSION_KEY = getattr(settings, 'URL_FRAMEWORK_SESSION_KEY', 'django_url_framework_flash')
@@ -55,7 +56,12 @@ class FlashManager(object):
         self.append(msg, 'error')
         
     def append(self, msg, msg_type = 'normal'):
-        self.messages.append( FlashMessage( **{'message':msg, 'kind': msg_type, 'is_error':msg_type=='error'}) )
+        new_message = FlashMessage( **{'message':msg, 'kind': msg_type, 'is_error':msg_type=='error'})
+        new_hash = new_message.hash()
+        for message in self.messages:
+            if message.hash()==new_hash:
+                return
+        self.messages.append( new_message )
         self.request.session[self.SESSION_KEY] = self.messages
     def set(self, msg, msg_type = 'normal'):
         self.append(msg, msg_type)
