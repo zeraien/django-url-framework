@@ -82,16 +82,24 @@ def get_controller_urlconf(controller_class, site=None):
                     #url(r'(?P<object_id>\d+)/$', wrapped_call, name=named_url)
                     )
             else:
-                arguments = action_func.func_code.co_varnames
-                if action_func.func_code.co_argcount==3:
-                    replace_dict['object_id_arg_name'] = arguments[2]
+                if hasattr(action_func, 'url_parameters'):
+                    arguments = action_func.url_parameters
+                    replace_dict['url_parameters'] = arguments
                     urlpatterns += patterns('',
-                        url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
-                        )
-                
-                urlpatterns += patterns('',
-                    url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
+                        url(r'^%(action)s/%(url_parameters)s$' % replace_dict, wrapped_call, name=named_url)
                     )
+
+                else:
+                    arguments = action_func.func_code.co_varnames
+                    if action_func.func_code.co_argcount==3:
+                        replace_dict['object_id_arg_name'] = arguments[2]
+                        urlpatterns += patterns('',
+                            url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
+                            )
+                
+                    urlpatterns += patterns('',
+                        url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
+                        )
                 
     return urlpatterns
 CACHED_ACTIONS = {}
@@ -174,6 +182,18 @@ class ActionController(object):
         
         allowed_methods
             An array or tuple of http methods permitted to access this action, can also be a string.
+
+        urlconf
+            A custom url configuration for this action, just like in Django's urls.py
+        
+        urlconf_erase
+            Whether to erase the default URL-conf for this action and just keep the custom one
+            
+        url_parameters
+            A string representing the argument part of the URL for this action, for instance:
+            The action 'user' is given the URL /user/, by adding r'(?P<user_id>\d+)' as the
+            url_parameters switch, the URL becomes /user/(?P<user_id>\d+)/.
+            The action function has to accept the specified arguments as method parameters.
 
         named_url
             A named url that django can use to call this function. Default is controller_action
