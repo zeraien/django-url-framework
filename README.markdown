@@ -10,104 +10,93 @@ Each function not starting with an underscore becomes it's own action. By simply
 
 Each action and controller can override certain global settings such as using a custom template name or giving the action (or controller) a custom name.
 
-== Add to your project ==
+## Add to your project
 
-*settings.py*
-{{{
-INSTALLED_APPS = (
-  ...,
-  'django_url_framework',
-  ...
-)
-}}}
+### settings.py
 
-*urls.py*
-{{{
-import django_url_framework
-from django.conf import settings
-django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
+	INSTALLED_APPS = (
+	  ...,
+	  'django_url_framework',
+	  ...
+	)
 
-urlpatterns = patterns('',
-    (r'^', include(django_url_framework.site.urls) ),
-)
-}}}
+### urls.py
+
+	import django_url_framework
+	from django.conf import settings
+	django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
+
+	urlpatterns = patterns('',
+	    (r'^', include(django_url_framework.site.urls) ),
+	)
 
 
-==Example==
+## Example
 
-===Folder structure===
+### Folder structure
 
-{{{
-project/
-  app/
-      cart_controller.py
-      foo_controller.py
-      templates/
-           cart/
-              add.html
-              index.html
-              remove.html
-           foo/
-              bar.html
-}}}
+	project/
+	  app/
+	      cart_controller.py
+	      foo_controller.py
+	      templates/
+	           cart/
+	              add.html
+	              index.html
+	              remove.html
+	           foo/
+	              bar.html
 
 
-*cart_controller.py* and *foo_controller.py*
-{{{
-class CartController(ActionController):
-   def add(self, id):
-      return {}
-   def remove(self, id)
-      return {}
-   def index(self):
-      return {}
+### cart_controller.py & foo_controller.py
 
-class FooController(ActionController):
-   def bar(self):
-      return {}
-}}}
+	class CartController(ActionController):
+	   def add(self, id):
+	      return {}
+	   def remove(self, id)
+	      return {}
+	   def index(self):
+	      return {}
 
-=== Result ===
+	class FooController(ActionController):
+	   def bar(self):
+	      return {}
+
+### Result
 
 The following URLs will be created:
 
-{{{
-/cart/
-/cart/(\d+)
-/cart/add/
-/cart/add/(\d+)
-/cart/remove/
-/cart/remove/(\d+)
-/foo/bar/
-/foo/bar/(\d+)
-}}}
+	/cart/
+	/cart/(\d+)
+	/cart/add/
+	/cart/add/(\d+)
+	/cart/remove/
+	/cart/remove/(\d+)
+	/foo/bar/
+	/foo/bar/(\d+)
 
 You can easily access your URLs using django's built-in *url* tag. Simply call *{% url cart_index %}* or *{% url cart_delete id %}* and it will work as you would expect.
 
 There is also a helper tag for faster linking within the same controller.
 *{% go_action remove %}* will take you to */cart/remove/*. To use it, load *url_framework* in your templates.
 
-== Flash ==
+## Flash
 
 The ActionController also has a _flash instance variable that allows you to send messages to the user that can survive a redirect. Simply use 
 
-{{{
-    self._flash.append("Message")
-    
-    self._flash.error("Error message")
-}}}
+	self._flash.append("Message")
+
+	self._flash.error("Error message")
 
 The flash messages can be either messages or error messages. The flash object is automatically exported into the context and you can use it as such:
 
-{{{
-    {% for message in flash.get_and_clear %}
-        <p class="{{message.type}}">{{message}}</p>
-    {% endfor %}
-}}}
+	{% for message in flash.get_and_clear %}
+	    <p class="{{message.type}}">{{message}}</p>
+	{% endfor %}
 
 
-== Before and After each action ==
+## Before and After each action
 
-You can override *`_`before_filter* and/or *`_`after_filter* to perform certain actions and checks before or after an action. Read more in ActionController docs.
+You can override `_before_filter` and/or `_after_filter` to perform certain actions and checks before or after an action. Read more in `ActionController` docs.
 
 These methods accept the "request" parameter which is an HTTP request object for this request.
