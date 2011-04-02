@@ -24,7 +24,8 @@ INSTALLED_APPS = (
 *urls.py*
 {{{
 import django_url_framework
-django_url_framework.site.autodiscover([r'^your_project_name'])
+from django.conf import settings
+django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
 
 urlpatterns = patterns('',
     (r'^', include(django_url_framework.site.urls) ),
@@ -43,10 +44,10 @@ project/
       foo_controller.py
       templates/
            cart/
+              add.html
               index.html
               remove.html
            foo/
-              add.html
               bar.html
 }}}
 
