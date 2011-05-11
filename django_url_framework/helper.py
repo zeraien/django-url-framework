@@ -1,4 +1,4 @@
-import urllib
+from django.utils.http import urlencode
 from django.core.urlresolvers import reverse
 from django_url_framework.exceptions import InvalidActionError
 from django_url_framework.exceptions import InvalidControllerError
@@ -36,5 +36,5 @@ class ApplicationHelper(object):
         url_params = kwargs.pop('url_params',None)
         url = reverse(named_url, args=args, kwargs=kwargs)
         if url_params is not None:
-            return u'%s?%s' % (url, urllib.urlencode(url_params))
+            return u'%s?%s' % (url, urlencode(url_params))
         return url

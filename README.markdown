@@ -51,34 +51,56 @@ Each action and controller can override certain global settings such as using a 
 ### cart_controller.py & foo_controller.py
 
 	class CartController(ActionController):
-	   def add(self, id):
+	   def edit(self, request, id = None):
 	      return {}
-	   def remove(self, id)
+	   def remove(self, request, id)
 	      return {}
-	   def index(self):
+	   def index(self, request):
 	      return {}
 
 	class FooController(ActionController):
-	   def bar(self):
+	   def bar(self, request):
 	      return {}
-
+	   def bar__delete(self, request):
+	      return {}
 ### Result
 
 The following URLs will be created:
 
-	/cart/
-	/cart/(\d+)
-	/cart/add/
-	/cart/add/(\d+)
-	/cart/remove/
-	/cart/remove/(\d+)
+	/cart/ <- will go to *index action*
+	/cart/edit/
+	/cart/edit/(\d+)/
+	/cart/remove/(\d+)/
 	/foo/bar/
-	/foo/bar/(\d+)
+	/foo/bar/delete/
 
 You can easily access your URLs using django's built-in *url* tag. Simply call *{% url cart_index %}* or *{% url cart_delete id %}* and it will work as you would expect.
 
 There is also a helper tag for faster linking within the same controller.
 *{% go_action remove %}* will take you to */cart/remove/*. To use it, load *url_framework* in your templates.
+
+## Action names and parameters
+
+In action names, double underscores __ are converted to slashes in the urlconf, so: *action__name* becomes */action/name/*.
+
+Providing a third parameter to an action will create a URLconf for that parameter, like so:
+
+	def action(self, request, object_id):
+		return {}
+
+Will allow you to call that action with:
+
+	 /controller/action/(\d+)/ <--- numeric argument
+
+If you make the argument optional, an additional URLconf entry is created allowing you to call the action without the numeric path.
+
+	def action(self, request, object_id = None):
+		return {}
+
+Results in:
+
+	 /controller/action/
+	 /controller/action/(\d+)/
 
 ## Flash
 

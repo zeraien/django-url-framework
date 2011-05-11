@@ -63,7 +63,7 @@ def get_controller_urlconf(controller_class, site=None):
     for action_name, action_func in actions.items():
         named_url = '%s_%s' % (get_controller_name(controller_class, with_prefix=False), get_action_name(action_func) )
         named_url = getattr(action_func, 'named_url', named_url)
-        replace_dict = {'action':action_name}
+        replace_dict = {'action':action_name.replace("__","/")}
         wrapped_call = wrap_call(controller_name, action_name, action_func)
 
         if hasattr(action_func, 'urlconf'):
