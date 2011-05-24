@@ -10,30 +10,33 @@ class ApplicationHelper(object):
     def __init__(self, controller):
         self.controller = controller
     
-    def url_for(self, *args, **kwargs):
+    def url_for(self, controller = None, action = None, named_url  = None, url_params = None, *args, **kwargs):
         from django_url_framework.controller import get_actions, get_controller_name
         
-        controller_name = kwargs.pop('controller', self.controller._controller_name)
+        if controller:
+            controller_name = controller
+        else:
+            controller_name = self.controller._controller_name
+            
         Controller = self.controller._site.controllers.get(controller_name, None)
         if Controller is None:
             raise InvalidControllerError(controller_name)
-            
-        if 'named_url' in kwargs:
-            named_url = kwargs.pop('named_url')
-        elif 'action' in kwargs:
-            action_name = kwargs.pop('action')
-            try:
-                action_func = get_actions(Controller,with_prefix=False)[action_name]
-            except KeyError:
-                raise InvalidActionError(action_name)
+        
+        if not named_url:
+            if action:
+                try:
+                    action_func = get_actions(Controller,with_prefix=False)[action]
+                except KeyError:
+                    import traceback
+                    traceback.print_exc()
+                    raise InvalidActionError(action)
                 
-            named_url = getattr(action_func,'named_url',None)
-            if named_url is None:
-                controller_name = get_controller_name(Controller, with_prefix=False)
-                named_url = '%s_%s' % (controller_name, action_name)
-        else:
-            named_url = controller_name
-        url_params = kwargs.pop('url_params',None)
+                named_url = getattr(action_func,'named_url',None)
+                if named_url is None:
+                    controller_name = get_controller_name(Controller, with_prefix=False)
+                    named_url = '%s_%s' % (controller_name, action)
+            else:
+                named_url = controller_name
         url = reverse(named_url, args=args, kwargs=kwargs)
         if url_params is not None:
             return u'%s?%s' % (url, urlencode(url_params))

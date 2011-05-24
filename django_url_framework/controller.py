@@ -38,13 +38,13 @@ def autoview_function(site, request, controller_name, controller_class, action_n
             helper = ApplicationHelper#self.helpers.get(controller_name, ApplicationHelper)
             return controller_class(site, request, helper)._call_action(action_name, *args, **kwargs)
         else:
-            raise InvalidActionError()
+            raise InvalidActionError(action_name)
         # else:
             # raise InvalidControllerError()
     # except InvalidControllerError, e:
         # error_msg = _("No such controller: %(controller_name)s") % {'controller_name' : controller_name}
     except InvalidActionError, e:
-        error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : action_name, 'controller_name' : controller_name}
+        error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e.message, 'controller_name' : controller_name}
         
     raise Http404(error_msg)
 
@@ -113,7 +113,7 @@ def get_action_name(func, with_prefix = False):
             if with_prefix and hasattr(func, 'action_prefix'):
                 func_name = func.action_prefix + func_name
             return func_name
-    raise InvalidActionError, "Action %s is not a valid action." % (func.func_name,)
+    raise InvalidActionError(func.func_name)
 
 def get_actions(controller, with_prefix = True):
     if isinstance(controller, ActionController):
@@ -251,7 +251,7 @@ class ActionController(object):
             action_func = getattr(self, action_func.func_name)
             return self._view_wrapper(action_func,*args, **kwargs)
         else:
-            raise InvalidActionError()
+            raise InvalidActionError(action_name)
 
     def _has_action(self, action_name, with_prefix = False):
         return (action_name in get_actions(action_name, with_prefix = with_prefix))
@@ -265,7 +265,7 @@ class ActionController(object):
             if with_prefix and hasattr(action_func, 'action_prefix'):
                 func_name = action_func.action_prefix + func_name
             return func_name
-        raise InvalidActionError(_("Action %(action_name)s not found.")  % {'action_name':action_name})
+        raise InvalidActionError(action_func.func_name)
 
     def _view_wrapper(self, action_func, *args, **kwargs):
         self._action_name = self._get_action_name(action_func)
