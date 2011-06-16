@@ -54,7 +54,7 @@ setup(
     description = 'Automagically discover urls in a django application, similar to the Ruby on Rails Controller/Action/View implementation.',
     author='Dmitri Fedortchenko',
     author_email='d@angelhill.net',
-    url='http://code.google.com/p/django-url-framework/',
+    url='https://github.com/zeraien/django-url-framework/',
     packages = packages,
     data_files = data_files,
     classifiers = ['Development Status :: 4 - Beta',
