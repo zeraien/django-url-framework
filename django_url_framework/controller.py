@@ -358,7 +358,7 @@ class ActionController(object):
                 charset = self._response._charset
             self._response['content-type'] = "%s; charset=%s" % (mimetype, charset)
     
-    def _as_json(self, data, *args, **kwargs):
+    def _as_json(self, data, status_code = 200, *args, **kwargs):
         """Render the returned dictionary as a JSON object."""
         import json
         if self._is_ajax and 'mimetype' not in kwargs:
@@ -366,16 +366,16 @@ class ActionController(object):
         self._template_context = data
         response = self.__wrap_after_filter(json.dumps, self._template_context)
         if type(response) in (str, unicode, SafeUnicode):
-            return self.__wrapped_print(response, *args, **kwargs)
+            return self.__wrapped_print(response, status_code=status_code, *args, **kwargs)
         else:
             return response
 
-    def _as_yaml(self, data, default_flow_style = True, *args, **kwargs):
+    def _as_yaml(self, data, default_flow_style = True, status_code = 200, *args, **kwargs):
         """Render the returned dictionary as a YAML object."""
         import yaml
         if self._is_ajax and 'mimetype' not in kwargs:
             kwargs['mimetype'] = 'application/yaml';
-        return self._print(yaml.dump(data, default_flow_style=default_flow_style), *args, **kwargs)
+        return self._print(yaml.dump(data, default_flow_style=default_flow_style), status_code=status_code, *args, **kwargs)
         
     def __wrapped_print(self, text, mimetype = 'text/plain', charset=None, status_code=200):
         """Print the returned string as plain text."""
