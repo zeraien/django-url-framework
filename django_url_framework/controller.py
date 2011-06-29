@@ -135,6 +135,23 @@ def get_actions(controller, with_prefix = True):
         CACHED_ACTIONS[controller_cache_key] = actions
     return CACHED_ACTIONS[controller_cache_key]
 
+def get_action_wrapper(site, controller_class, action_name):
+    """Possible future helper method..."""
+    controller_name = get_controller_name(controller_class)
+    actions = get_actions(controller_class)
+    def wrap_call(controller_name, action_name, action_func):
+        """Wrapper for the function called by the url."""
+        def wrapper(*args, **kwargs):
+            request, args = args[0], args[1:]
+            return autoview_function(site, request, controller_name, controller_class, action_name, *args, **kwargs)
+        return wraps(action_func)(wrapper)
+    
+    if action_name in actions:
+        wrapped_call = wrap_call(controller_name, action_name, actions[action_name])
+        return wrapped_call
+    else:
+        raise InvalidActionError(action_name)
+
 class ActionController(object):
     """
     Any function that does not start with a _ will be considered an action.
@@ -184,7 +201,8 @@ class ActionController(object):
             An array or tuple of http methods permitted to access this action, can also be a string.
 
         urlconf
-            A custom url configuration for this action, just like in Django's urls.py
+            A custom url configuration for this action, just like in Django's urls.py.
+            The custom urlconf applies after the urlconf for the controller.
         
         urlconf_erase
             Whether to erase the default URL-conf for this action and just keep the custom one
