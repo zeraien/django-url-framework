@@ -1,3 +1,4 @@
+import logging
 import re
 import dircache
 import imp
@@ -24,6 +25,7 @@ class Site(object):
     def __init__(self):
         self.controllers = {}
         self.helpers = {}
+        self.logger = logging.getLogger(__name__)
 
     def autodiscover(self, include_apps = [], exclude_apps = []):
         """Autodiscover all urls within all applications that regex match any entry in 'include_apps'
@@ -76,10 +78,11 @@ class Site(object):
             try:
                 found_controller = imp.find_module('%s_controller' % controller_file, app_path)
             except ImportError, e:
-                if settings.DEBUG: print 'failed to import controller: ', e
+                self.logger.warning("Failed to find proper controller in %s" % controller_file, exc_info=True)
                 continue
             else:
                 controller_module = imp.load_module('%s_controller' % controller_file, *found_controller)
+                self.logger.debug("Loaded controller from %s" % controller_file)
                 for controller_class_name in dir(controller_module):
                     # test_name = '%sController' % ''.join([i.title() for i in controller_file.split('_')])
                     if not controller_class_name.endswith('Controller'):
@@ -98,10 +101,11 @@ class Site(object):
                         try:
                             found_helper = imp.find_module('%s_helper' % controller_file, app_path)
                         except ImportError, e:
-                            if settings.DEBUG: print 'failed to import helper: ',e
+                            self.logger.debug("No helper found for %s" % controller_name)
                             continue
                         else:
                             helper_module = imp.load_module('%s_helper' % controller_file, *found_helper)
+                            self.logger.debug("Loaded helper for %s" % controller_name)
                             helper_class = getattr(helper_module ,'%sHelper' % controller_file.title())
                             if issubclass(helper_class, ApplicationHelper):
                                 self.helpers[controller_name] = helper_class
