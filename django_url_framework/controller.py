@@ -300,23 +300,33 @@ class ActionController(object):
             if self._request.method.upper() not in allowed_methods:
                 return HttpResponseNotAllowed(allowed_methods)
                 
+        send_args = {}
+        if hasattr(action_func,'mimetype'):
+            send_args['mimetype'] = action_func.mimetype
+
         try:
             response = self.__wrap_before_filter(action_func, *args, **kwargs)
+
+            if type(response) is dict:
+                return self.__wrap_after_filter(self.__wrapped_render, response, **send_args)
+            elif type(response) in (str,unicode,SafeUnicode):
+                return self.__wrap_after_filter(self.__wrapped_print, response, **send_args)
+            else:
+                return response
+
         except Exception, exception:
             response = self._on_exception(request=self._request, exception=exception)
+            
             if response is None:
                 raise exception, None, sys.exc_info()[-1]
-        
-        send_args = {}
-                
-        if type(response) is dict:
-            return self.__wrap_after_filter(self.__wrapped_render, response, **send_args)
-        elif type(response) in (str,unicode,SafeUnicode):
-            if hasattr(action_func,'mimetype'):
-                send_args['mimetype'] = action_func.mimetype
-            return self.__wrap_after_filter(self.__wrapped_print, response, **send_args)
-        else:
-            return response
+            else:
+                if type(response) is dict:
+                    return self.__wrapped_render(dictionary=response, template_name=self._get_error_template_path())
+                elif type(response) in (str,unicode,SafeUnicode):
+                    return self.__wrapped_print(text=response, **send_args)
+                else:
+                    return response
+
 
     def __wrap_before_filter(self, wrapped_func, *args, **kwargs):
         if getattr(self, '_before_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
@@ -371,7 +381,15 @@ class ActionController(object):
     def _before_render(self, request = None):
         return None
     def _on_exception(self, request, exception):
-        """Can be overriden to handle uncaught exceptions"""
+        """Can be overriden to handle uncaught exceptions.
+        
+        If you set the use_action_specific_template attribute on this function,
+        each action will need it's own error template, called controller/action__error.html.
+        
+        The default value for use_action_specific_template is False.
+        
+        It also accepts template_name and ajax_template_name.
+        """
         return None
     
     def _set_cookie(self, *args, **kwargs):
@@ -424,6 +442,35 @@ class ActionController(object):
             self._flash_cache = FlashManager(self._request)
         return self._flash_cache
     _flash = property(_get_flash)
+    
+    def _get_error_template_path(self):
+        """Return the path to the error template for the current action.
+        The error template is called by the action's name, followed by __error (double underscore).
+        Example:
+        Controller: foo
+        Action: list
+        Template: foo/list.html
+        Error template: foo/list__error.html
+        """
+        template_name = None
+        if self._is_ajax and self._ignore_ajax==False and hasattr(self._on_exception,'ajax_template_name'):
+            template_name = self._on_exception.ajax_template_name
+        elif hasattr(self._on_exception,'template_name'):
+            template_name = self._on_exception.template_name
+            
+        if template_name is None:
+            if getattr(self._on_exception, 'use_action_specific_template', False) == False:
+                if self._is_ajax and self._ignore_ajax==False:
+                    template_name = "_error.html"
+                else:
+                    template_name = "error.html"
+            else:
+                if self._is_ajax and self._ignore_ajax==False:
+                    template_name = self._ajax_template_string % {'controller':self._template_prefix, 'action':self._action_name+"__error"}
+                else:
+                    template_name = self._template_string % {'controller':self._template_prefix, 'action':self._action_name+"__error"}
+        return template_name
+        
     
     def __wrapped_render(self, dictionary = {}, *args, **kwargs):
         """Render the provided dictionary using the default template for the given action.
