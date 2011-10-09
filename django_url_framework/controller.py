@@ -1,6 +1,7 @@
 from functools import wraps
 from django.http import *
 import re
+import sys
 from django.utils.safestring import SafeUnicode
 from django_url_framework.helper import ApplicationHelper
 from django.utils.translation import ugettext as _
@@ -299,7 +300,12 @@ class ActionController(object):
             if self._request.method.upper() not in allowed_methods:
                 return HttpResponseNotAllowed(allowed_methods)
                 
-        response = self.__wrap_before_filter(action_func, *args, **kwargs)
+        try:
+            response = self.__wrap_before_filter(action_func, *args, **kwargs)
+        except Exception, exception:
+            response = self._on_exception(request=self._request, exception=exception)
+            if response is None:
+                raise exception, None, sys.exc_info()[-1]
         
         send_args = {}
                 
@@ -335,7 +341,7 @@ class ActionController(object):
         if getattr(self, '_after_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._after_filter_runonce = True
             if self._after_filter.func_code.co_argcount >= 2:
-                filter_response = self._after_filter(self._request)
+                filter_response = self._after_filter(request=self._request)
             else:
                 filter_response = self._after_filter()
                 
@@ -363,6 +369,9 @@ class ActionController(object):
     def _after_filter(self, request):
         return None
     def _before_render(self, request = None):
+        return None
+    def _on_exception(self, request, exception):
+        """Can be overriden to handle uncaught exceptions"""
         return None
     
     def _set_cookie(self, *args, **kwargs):
