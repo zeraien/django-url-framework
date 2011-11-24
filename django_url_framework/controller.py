@@ -1,3 +1,4 @@
+import inspect
 from functools import wraps
 from django.http import *
 import re
@@ -91,16 +92,19 @@ def get_controller_urlconf(controller_class, site=None):
                     )
 
                 else:
-                    arguments = action_func.func_code.co_varnames
-                    if action_func.func_code.co_argcount==3:
+                    arg_spec = inspect.getargspec(action_func)
+                    arguments = arg_spec.args
+                    has_default = True
+                    if len(arguments)==3:
+                        has_default = arg_spec.defaults and len(arg_spec.defaults) > 0
                         replace_dict['object_id_arg_name'] = arguments[2]
                         urlpatterns += patterns('',
                             url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
                             )
-                
-                    urlpatterns += patterns('',
-                        url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
-                        )
+                    if has_default:
+                        urlpatterns += patterns('',
+                            url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
+                            )
                 
     return urlpatterns
 CACHED_ACTIONS = {}
