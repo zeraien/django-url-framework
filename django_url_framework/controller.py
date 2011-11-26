@@ -38,7 +38,12 @@ def autoview_function(site, request, controller_name, controller_class, action_n
         # controller_class = self.controllers[controller_name]
         if action_name in get_actions(controller_class):
             helper = ApplicationHelper#self.helpers.get(controller_name, ApplicationHelper)
-            return controller_class(site, request, helper)._call_action(action_name, *args, **kwargs)
+            kwargs_all = kwargs.copy()
+            if hasattr(controller_class, 'consume_urlconf_keyword_arguments'):
+                for kwarg in controller_class.consume_urlconf_keyword_arguments:
+                    if kwarg in kwargs:
+                        del(kwargs[kwarg])
+            return controller_class(site, request, helper, url_params=kwargs_all)._call_action(action_name, *args, **kwargs)
         else:
             raise InvalidActionError(action_name)
         # else:
@@ -67,19 +72,21 @@ def get_controller_urlconf(controller_class, site=None):
         named_url = getattr(action_func, 'named_url', named_url)
         replace_dict = {'action':action_name.replace("__","/")}
         wrapped_call = wrap_call(controller_name, action_name, action_func)
-
+        urlconf_prefix = getattr(controller_class, 'urlconf_prefix', None)
+        action_urlpatterns = patterns('')
+        
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
             for line in action_func.urlconf:
                 new_urlconf = r'^%s$' % line
-                urlpatterns += patterns('', url(new_urlconf, wrapped_call, name=named_url), )
+                action_urlpatterns += patterns('', url(new_urlconf, wrapped_call, name=named_url), )
         
         if getattr(action_func, 'urlconf_erase', False) == False:
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
             
             if action_name == 'index':
                 """No root URL is generated if we have no index action."""
-                urlpatterns += patterns('',
+                action_urlpatterns += patterns('',
                     url(r'^$', wrapped_call, name=named_url),
                     #url(r'(?P<object_id>\d+)/$', wrapped_call, name=named_url)
                     )
@@ -87,7 +94,7 @@ def get_controller_urlconf(controller_class, site=None):
                 if hasattr(action_func, 'url_parameters'):
                     arguments = action_func.url_parameters
                     replace_dict['url_parameters'] = arguments
-                    urlpatterns += patterns('',
+                    action_urlpatterns += patterns('',
                         url(r'^%(action)s/%(url_parameters)s$' % replace_dict, wrapped_call, name=named_url)
                     )
 
@@ -98,14 +105,21 @@ def get_controller_urlconf(controller_class, site=None):
                     if len(arguments)==3:
                         has_default = arg_spec.defaults and len(arg_spec.defaults) > 0
                         replace_dict['object_id_arg_name'] = arguments[2]
-                        urlpatterns += patterns('',
+                        action_urlpatterns += patterns('',
                             url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
                             )
                     if has_default:
-                        urlpatterns += patterns('',
+                        action_urlpatterns += patterns('',
                             url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
                             )
-                
+
+            if urlconf_prefix:
+                action_urlpatterns_with_prefix = patterns('')
+                for _urlconf in urlconf_prefix:
+                    action_urlpatterns_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns)))
+                urlpatterns+=action_urlpatterns_with_prefix
+            else:
+                urlpatterns+=action_urlpatterns
     return urlpatterns
 CACHED_ACTIONS = {}
 
@@ -167,6 +181,13 @@ class ActionController(object):
 
     ActionControllers can have the following attributes:
 
+        urlconf_prefix
+                Set a prefix for all urls in the controller
+
+        consume_urlconf_keyword_arguments
+                list - Use together with urlconf_prefix, to avoid passing any of the specified keyword
+                arguments to actions
+                
         controller_name
                 Set the controller's name
     
@@ -232,7 +253,7 @@ class ActionController(object):
     
     """
     
-    def __init__(self, site, request, helper_class):
+    def __init__(self, site, request, helper_class, url_params):
         self._site = site
         self._helper = helper_class(self)
         self._request = request
@@ -246,6 +267,7 @@ class ActionController(object):
         self._template_context = {}
         self._ignore_ajax = getattr(self, 'ignore_ajax', False)
         self._is_ajax = request.is_ajax()
+        self._url_params = url_params
             
         if hasattr(self, 'template_prefix'):
             self._template_prefix = getattr(self, 'template_prefix')
