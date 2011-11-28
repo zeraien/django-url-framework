@@ -113,13 +113,14 @@ def get_controller_urlconf(controller_class, site=None):
                             url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
                             )
 
-            if urlconf_prefix:
-                action_urlpatterns_with_prefix = patterns('')
-                for _urlconf in urlconf_prefix:
-                    action_urlpatterns_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns)))
-                urlpatterns+=action_urlpatterns_with_prefix
-            else:
-                urlpatterns+=action_urlpatterns
+        if urlconf_prefix:
+            action_urlpatterns_with_prefix = patterns('')
+            for _urlconf in urlconf_prefix:
+                action_urlpatterns_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns)))
+            urlpatterns+=action_urlpatterns_with_prefix
+        else:
+            urlpatterns+=action_urlpatterns
+
     return urlpatterns
 CACHED_ACTIONS = {}
 
