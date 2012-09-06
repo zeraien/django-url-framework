@@ -32,7 +32,7 @@ def url_for(parser, token):
         raise template.TemplateSyntaxError, "%r tag requires at least one argument" % token.contents.split()[0]
     return UrlNode(named_url='/'.join(tag_data[1:]))
 
-def reverse_url(helper, named_url = None, *args, **kwargs):
+def reverse_url(helper, named_url = None, action = None, extras = None):
     """Can be given parameters such as controller or action.
     Also accepts other unknown parameters such as 'id'.
     
@@ -58,6 +58,7 @@ def reverse_url(helper, named_url = None, *args, **kwargs):
                     => controller: The view controller, action: _delete, item: bar
     """
     if named_url is not None:
+        kwargs = {}
         url_parts = str(named_url).strip('/ ').split('/')
         url_part_order = ['controller', 'action', 'id']
         for url_part in url_parts:
@@ -66,8 +67,7 @@ def reverse_url(helper, named_url = None, *args, **kwargs):
             elif len(url_part_order) > 0:
                 name, value = (url_part_order.pop(0), url_part)
             kwargs[name] = value
+        return helper.url_for(url_args=extras, **kwargs)
     else:
-        if 'extras' in kwargs:
-            args += tuple(kwargs.pop('extras',[]))
-    return helper.url_for(*args, **kwargs)
+        return helper.url_for(controller=None, action=action, named_url=named_url, url_args=extras)
 

@@ -10,7 +10,7 @@ class ApplicationHelper(object):
     def __init__(self, controller):
         self.controller = controller
     
-    def url_for(self, controller = None, action = None, named_url  = None, url_params = None, *args, **kwargs):
+    def url_for(self, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None):
         from django_url_framework.controller import get_actions, get_controller_name
         
         if controller:
@@ -37,7 +37,7 @@ class ApplicationHelper(object):
                     named_url = '%s_%s' % (controller_name, action)
             else:
                 named_url = controller_name
-        url = reverse(named_url, args=args, kwargs=kwargs)
+        url = reverse(named_url, args=url_args, kwargs=url_kwargs)
         if url_params is not None:
             return u'%s?%s' % (url, urlencode(url_params))
         return url
