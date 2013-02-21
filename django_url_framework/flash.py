@@ -9,7 +9,9 @@ class FlashMessage(object):
         self.kind = kind
     
     def hash(self):
-        return hashlib.sha1(u"%s|%s" % (self.message, self.kind)).hexdigest()
+        msgdigest = hashlib.md5(self.message).hexdigest()
+        kinddigest = hashlib.md5(self.message).hexdigest()
+        return hashlib.md5(msgdigest+kinddigest).hexdigest()
     
     def __repr__(self):
         return mark_safe(self.message)
