@@ -67,7 +67,8 @@ class Site(object):
                     if f.endswith('_controller.py'):
                         available_controllers.append(f[:-14])
                 self.load_controllers(app_path, available_controllers)
-            except AttributeError:
+            except AttributeError, e:
+                self.logger.exception(e)
                 continue
                 
     def load_controllers(self, app_path, controllers):
@@ -106,8 +107,8 @@ class Site(object):
                         else:
                             helper_module = imp.load_module('%s_helper' % controller_file, *found_helper)
                             self.logger.debug("Loaded helper for %s" % controller_name)
-                            helper_class = getattr(helper_module ,'%sHelper' % controller_file.title())
-                            if issubclass(helper_class, ApplicationHelper):
+                            helper_class = getattr(helper_module ,'%sHelper' % controller_file.title(), None)
+                            if helper_class and issubclass(helper_class, ApplicationHelper):
                                 self.helpers[controller_name] = helper_class
                         finally:
                             if found_helper:
