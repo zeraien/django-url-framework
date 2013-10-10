@@ -56,6 +56,15 @@ def autoview_function(site, request, controller_name, controller_class, action_n
     raise Http404(error_msg)
 
 
+def _get_arg_name_and_default(action_func):
+    arg_spec = inspect.getargspec(action_func)
+    arguments = arg_spec.args
+    has_default = True
+    if len(arguments) == 3:
+        has_default = arg_spec.defaults and len(arg_spec.defaults) > 0
+        return arguments[2], has_default
+    return None, has_default
+
 def get_controller_urlconf(controller_class, site=None):
     controller_name = get_controller_name(controller_class)
     actions = get_actions(controller_class)
@@ -85,11 +94,19 @@ def get_controller_urlconf(controller_class, site=None):
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
             
             if action_name == 'index':
-                """No root URL is generated if we have no index action."""
-                action_urlpatterns += patterns('',
-                    url(r'^$', wrapped_call, name=named_url),
-                    #url(r'(?P<object_id>\d+)/$', wrapped_call, name=named_url)
+                # No root URL is generated if we have no index action.
+
+                object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
+                if object_id_arg_name is not None:
+                    replace_dict['object_id_arg_name'] = object_id_arg_name
+                    action_urlpatterns += patterns('',
+                                                   url(r'^(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
                     )
+                if has_default:
+                    action_urlpatterns += patterns('',
+                                                   url(r'^$', wrapped_call, name=named_url),
+                                                   )
+
             else:
                 if hasattr(action_func, 'url_parameters'):
                     arguments = action_func.url_parameters
@@ -99,19 +116,16 @@ def get_controller_urlconf(controller_class, site=None):
                     )
 
                 else:
-                    arg_spec = inspect.getargspec(action_func)
-                    arguments = arg_spec.args
-                    has_default = True
-                    if len(arguments)==3:
-                        has_default = arg_spec.defaults and len(arg_spec.defaults) > 0
-                        replace_dict['object_id_arg_name'] = arguments[2]
+                    object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
+                    if object_id_arg_name is not None:
+                        replace_dict['object_id_arg_name'] = object_id_arg_name
                         action_urlpatterns += patterns('',
-                            url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
-                            )
+                                                       url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
+                        )
                     if has_default:
                         action_urlpatterns += patterns('',
-                            url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
-                            )
+                                                       url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
+                                                       )
 
         if urlconf_prefix:
             action_urlpatterns_with_prefix = patterns('')
@@ -568,4 +582,3 @@ class ActionController(object):
     
     def _permanent_redirect(self, to_url, *args, **kwargs):
         return self.__wrap_after_filter(self.__wrapped_permanent_redirect, to_url, *args, **kwargs)
-        
