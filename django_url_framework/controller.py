@@ -6,8 +6,7 @@ import sys
 from django.utils.safestring import SafeUnicode
 from django_url_framework.helper import ApplicationHelper
 from django.utils.translation import ugettext as _
-from django.core.xheaders import populate_xheaders
-from django.conf.urls.defaults import patterns, url, include
+from django.conf.urls import patterns, url, include
 
 from django_url_framework.exceptions import InvalidActionError
 from django_url_framework.exceptions import InvalidControllerError
@@ -558,9 +557,10 @@ class ActionController(object):
             elif before_render_response is not None:
                 return before_render_response
 
-        obj = getattr(self, '_object',None)
-        if obj is not None:
-            populate_xheaders(self._request, self._response, obj.__class__, obj.pk)
+        # todo used to populate xheaders for debugging purposes
+        # obj = getattr(self, '_object',None)
+        # if obj is not None:
+        #     populate_xheaders(self._request, self._response, obj.__class__, obj.pk)
 
         self._response.content = loader.render_to_string(dictionary=self._template_context, *args, **kwargs)
         return self._response
