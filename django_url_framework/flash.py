@@ -12,7 +12,14 @@ class FlashMessage(object):
         msgdigest = hashlib.md5(self.message).hexdigest()
         kinddigest = hashlib.md5(self.message).hexdigest()
         return hashlib.md5(msgdigest+kinddigest).hexdigest()
-    
+
+    def json_ready(self):
+        return {
+            'message': self.message,
+            'is_error': self.is_error,
+            'kind': self.kind
+        }
+
     def __repr__(self):
         return mark_safe(self.message)
 
@@ -27,10 +34,12 @@ class FlashManager(object):
     
     def _get_messages(self):
         if self._messages_cache is None:
+            self._messages_cache = []
             if self.SESSION_KEY in self.request.session:
                 self._messages_cache = self.request.session[self.SESSION_KEY]
-            else:
-                self._messages_cache = []
+                for msg_data in self.request.session[self.SESSION_KEY]:
+                    self._messages_cache.append(FlashMessage(**msg_data))
+
         return self._messages_cache
     messages = property(_get_messages)
     
@@ -64,7 +73,7 @@ class FlashManager(object):
             if message.hash()==new_hash:
                 return
         self.messages.append( new_message )
-        self.request.session[self.SESSION_KEY] = self.messages
+        self.request.session[self.SESSION_KEY] = [m.json_ready() for m in self.messages]
     def set(self, msg, msg_type = 'normal'):
         self.append(msg, msg_type)
     def error(self, msg):
