@@ -118,7 +118,7 @@ class Site(object):
                     found_controller[0].close()
             
     def _get_urls(self):
-        from django.conf.urls.defaults import patterns, url, include
+        from django.conf.urls import patterns, include
         urlpatterns = patterns('')
         
         for controller_name, controller_class in self.controllers.items():
