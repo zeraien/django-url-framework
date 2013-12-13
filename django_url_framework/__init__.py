@@ -1,4 +1,4 @@
-VERSION = (0, 1, 'pre5')
+VERSION = (0, 2, 2)
 
 from django_url_framework.site import Site
 from django_url_framework.controller import ActionController
@@ -13,7 +13,7 @@ def reraise(exception, info=None):
 
 # Dynamically calculate the version based on VERSION tuple
 if len(VERSION)>2 and VERSION[2] is not None:
-    str_version = "%d.%d_%s" % VERSION[:3]
+    str_version = "%d.%d.%s" % VERSION[:3]
 else:
     str_version = "%d.%d" % VERSION[:2]
 

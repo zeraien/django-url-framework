@@ -58,6 +58,9 @@ setup(
     url='https://github.com/zeraien/django-url-framework/',
     packages = packages,
     data_files = data_files,
+    install_requires=[
+          'django >= 1.4',
+      ],
     classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',
