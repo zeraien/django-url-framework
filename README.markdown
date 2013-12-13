@@ -10,6 +10,14 @@ Each function not starting with an underscore becomes it's own action. By simply
 
 Each action and controller can override certain global settings such as using a custom template name or giving the action (or controller) a custom name.
 
+## Install
+
+From pypi:
+
+    pip install django-url-framework
+
+Alternatively just check out the source here and run `python setup.py install`
+
 ## Add to your project
 
 ### settings.py
@@ -59,6 +67,8 @@ Each action and controller can override certain global settings such as using a 
 	      return {}
 
 	class FooController(ActionController):
+	   def index(self, request, object_id = None):
+	      return {}
 	   def bar(self, request):
 	      return {}
 	   def bar__delete(self, request):
@@ -71,7 +81,9 @@ The following URLs will be created:
 	/cart/edit/
 	/cart/edit/(\d+)/
 	/cart/remove/(\d+)/
-	/foo/bar/
+	/foo/
+	/foo/(\d+)/
+    /foo/bar/
 	/foo/bar/delete/
 
 You can easily access your URLs using django's built-in *url* tag. Simply call *{% url cart_index %}* or *{% url cart_delete id %}* and it will work as you would expect.
@@ -113,7 +125,11 @@ The ActionController also has a _flash instance variable that allows you to send
 The flash messages can be either messages or error messages. The flash object is automatically exported into the context and you can use it as such:
 
 	{% for message in flash.get_and_clear %}
+
+	    {% if message.is_error %}<span class='icon-error'></span>{% endif %}
+
 	    <p class="{{message.type}}">{{message}}</p>
+	    
 	{% endfor %}
 
 
