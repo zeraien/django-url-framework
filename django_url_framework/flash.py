@@ -1,17 +1,17 @@
 from django.conf import settings
 import hashlib
+from django.utils.encoding import smart_text
 from django.utils.safestring import mark_safe
 
 class FlashMessage(object):
     def __init__(self, message, is_error=False, kind='normal'):
-        self.message = message.encode('utf8')
+        self.message = smart_text(message, encoding="utf8")
         self.is_error = is_error
         self.kind = kind
+        self.digest = hashlib.sha1(self.message.encode('utf8') + kind.encode('utf8')).hexdigest()
     
     def hash(self):
-        msgdigest = hashlib.md5(self.message).hexdigest()
-        kinddigest = hashlib.md5(self.message).hexdigest()
-        return hashlib.md5(msgdigest+kinddigest).hexdigest()
+        return self.digest
 
     def json_ready(self):
         return {
@@ -20,11 +20,14 @@ class FlashMessage(object):
             'kind': self.kind
         }
 
-    def __repr__(self):
+    def __unicode__(self):
         return mark_safe(self.message)
 
+    def __repr__(self):
+        return mark_safe(self.message.encode('utf8'))
+
     def __str__(self):
-        return mark_safe(self.message)
+        return self.__repr__()
 
 class FlashManager(object):
     SESSION_KEY = getattr(settings, 'URL_FRAMEWORK_SESSION_KEY', 'django_url_framework_flash')
@@ -72,7 +75,11 @@ class FlashManager(object):
         
     def append(self, msg, msg_type='normal'):
 
-        new_message = FlashMessage(**{'message': msg, 'kind': msg_type, 'is_error': msg_type == 'error'})
+        new_message = FlashMessage(**{
+            'message': smart_text(msg, encoding="utf8"),
+            'kind': msg_type,
+            'is_error': msg_type == 'error'
+        })
         new_hash = new_message.hash()
 
         for message in self.messages:

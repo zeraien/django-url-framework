@@ -1,4 +1,4 @@
-VERSION = (0, 2, 3)
+VERSION = (0, 2, 4)
 
 from django_url_framework.site import Site
 from django_url_framework.controller import ActionController
