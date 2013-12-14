@@ -36,7 +36,6 @@ class FlashManager(object):
         if self._messages_cache is None:
             self._messages_cache = []
             if self.SESSION_KEY in self.request.session:
-                self._messages_cache = self.request.session[self.SESSION_KEY]
                 for msg_data in self.request.session[self.SESSION_KEY]:
                     self._messages_cache.append(FlashMessage(**msg_data))
 
