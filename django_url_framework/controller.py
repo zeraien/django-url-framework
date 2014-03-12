@@ -99,7 +99,7 @@ def get_controller_urlconf(controller_class, site=None):
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
                     action_urlpatterns += patterns('',
-                                                   url(r'^(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
+                                                   url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url)
                     )
                 if has_default:
                     action_urlpatterns += patterns('',
@@ -119,7 +119,7 @@ def get_controller_urlconf(controller_class, site=None):
                     if object_id_arg_name is not None:
                         replace_dict['object_id_arg_name'] = object_id_arg_name
                         action_urlpatterns += patterns('',
-                                                       url(r'^%(action)s/(?P<%(object_id_arg_name)s>\d+)/$' % replace_dict, wrapped_call, name=named_url)
+                                                       url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url)
                         )
                     if has_default:
                         action_urlpatterns += patterns('',
