@@ -68,13 +68,14 @@ def get_controller_urlconf(controller_class, site=None):
     controller_name = get_controller_name(controller_class)
     actions = get_actions(controller_class)
     urlpatterns = patterns('')
+    urlpatterns_with_args = patterns('')
     def wrap_call(controller_name, action_name, action_func):
         """Wrapper for the function called by the url."""
         def wrapper(*args, **kwargs):
             request, args = args[0], args[1:]
             return autoview_function(site, request, controller_name, controller_class, action_name, *args, **kwargs)
         return wraps(action_func)(wrapper)
-        
+
     for action_name, action_func in actions.items():
         named_url = '%s_%s' % (get_controller_name(controller_class, with_prefix=False), get_action_name(action_func) )
         named_url = getattr(action_func, 'named_url', named_url)
@@ -82,7 +83,8 @@ def get_controller_urlconf(controller_class, site=None):
         wrapped_call = wrap_call(controller_name, action_name, action_func)
         urlconf_prefix = getattr(controller_class, 'urlconf_prefix', None)
         action_urlpatterns = patterns('')
-        
+        index_action_with_args_urlconf = patterns('')
+
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
             for line in action_func.urlconf:
@@ -98,7 +100,7 @@ def get_controller_urlconf(controller_class, site=None):
                 object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
-                    action_urlpatterns += patterns('',
+                    index_action_with_args_urlconf += patterns('',
                                                    url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url)
                     )
                 if has_default:
@@ -131,10 +133,17 @@ def get_controller_urlconf(controller_class, site=None):
             for _urlconf in urlconf_prefix:
                 action_urlpatterns_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns)))
             urlpatterns+=action_urlpatterns_with_prefix
+
+            action_urlpatterns_with_args_with_prefix = patterns('')
+            for _urlconf in urlconf_prefix:
+                action_urlpatterns_with_args_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns_with_args_with_prefix)))
+
+            urlpatterns_with_args+=action_urlpatterns_with_args_with_prefix
         else:
             urlpatterns+=action_urlpatterns
+            urlpatterns_with_args+=index_action_with_args_urlconf
 
-    return urlpatterns
+    return urlpatterns+urlpatterns_with_args
 CACHED_ACTIONS = {}
 
 def get_action_name(func, with_prefix = False):
