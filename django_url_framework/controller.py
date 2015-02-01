@@ -228,7 +228,13 @@ class ActionController(object):
                 Directory or filename prefix for template files.
                 
                 Default: controller name sans prefix
-            
+
+        template_extension
+                Template file extension, globally replaces extension of templates.
+                For example to use jade or another template language.
+
+                Default: html
+
         ignore_ajax
                 This controller ignores template file name changes based on the ajax nature of a request.
                 If this is False, the template file will be prefixed with _ (underscore) for all ajax requests.
@@ -291,18 +297,20 @@ class ActionController(object):
         self._ignore_ajax = getattr(self, 'ignore_ajax', False)
         self._is_ajax = request.is_ajax()
         self._url_params = url_params
-            
+
+        self._template_extension = getattr(self, 'template_extension', 'html')
+
         if hasattr(self, 'template_prefix'):
             self._template_prefix = getattr(self, 'template_prefix')
         else:
             self._template_prefix = self._controller_name_sans_prefix
             
         if hasattr(self, 'no_subdirectories'):
-            self._template_string = "%(controller)s_%(action)s.html"
-            self._ajax_template_string = "_%(controller)s_%(action)s.html"
+            self._template_string = "%(controller)s_%(action)s.%(ext)s"
+            self._ajax_template_string = "_%(controller)s_%(action)s.%(ext)s"
         else:
-            self._template_string = "%(controller)s/%(action)s.html"
-            self._ajax_template_string = "%(controller)s/_%(action)s.html"
+            self._template_string = "%(controller)s/%(action)s.%(ext)s"
+            self._ajax_template_string = "%(controller)s/_%(action)s.%(ext)s"
         self._actions = get_actions(self, with_prefix = True)
         self._actions_by_name = get_actions(self, with_prefix = False)
 
@@ -510,14 +518,17 @@ class ActionController(object):
         if template_name is None:
             if getattr(self._on_exception, 'use_action_specific_template', False) == False:
                 if self._is_ajax and self._ignore_ajax==False:
-                    template_name = "_error.html"
+                    template_name = "_error.%(ext)s"
                 else:
-                    template_name = "error.html"
+                    template_name = "error.%(ext)s"
             else:
-                if self._is_ajax and self._ignore_ajax==False:
-                    template_name = self._ajax_template_string % {'controller':self._template_prefix, 'action':self._action_name+"__error"}
+                template_name_data = {'controller': self._template_prefix,
+                                      'action': self._action_name+"__error",
+                                      'ext': self._template_extension}
+                if self._is_ajax and self._ignore_ajax == False:
+                    template_name = self._ajax_template_string % template_name_data
                 else:
-                    template_name = self._template_string % {'controller':self._template_prefix, 'action':self._action_name+"__error"}
+                    template_name = self._template_string % template_name_data
         return template_name
         
     
@@ -542,15 +553,19 @@ class ActionController(object):
             self._response['content-type'] = ('Content-Type', mimetype)
 
         if 'template_name' not in kwargs:
+            template_replacement_data = {'controller':self._template_prefix,
+                                         'action':self._action_name,
+                                         'ext':self._template_extension}
+
             if self._is_ajax and self._ignore_ajax==False:
                 if hasattr(self._action_func, 'ajax_template_name'):
                     template_name = self._action_func.ajax_template_name
                 else:
-                    template_name = self._ajax_template_string % {'controller':self._template_prefix, 'action':self._action_name}
+                    template_name = self._ajax_template_string % template_replacement_data
             elif hasattr(self._action_func,'template_name'):
                 template_name = self._action_func.template_name
             else:
-                template_name = self._template_string % {'controller':self._template_prefix, 'action':self._action_name}
+                template_name = self._template_string % template_replacement_data
             kwargs['template_name'] = template_name
             
         if 'context_instance' not in kwargs:
