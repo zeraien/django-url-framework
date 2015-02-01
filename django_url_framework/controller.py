@@ -322,7 +322,7 @@ class ActionController(object):
     _params = property(_get_params)
 
     def _call_action(self, action_name, *args, **kwargs):
-        if self._actions.has_key(action_name):
+        if action_name in self._actions:
             action_func = self._actions[action_name]
             action_func = getattr(self, action_func.func_name)
             return self._view_wrapper(action_func,*args, **kwargs)
