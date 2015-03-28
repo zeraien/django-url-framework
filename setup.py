@@ -49,10 +49,10 @@ for dirpath, dirnames, filenames in os.walk(module_dir):
 version = __import__('django_url_framework').__version__
 
 setup(
-    name = 'django-url-framework',
-    version = version,
-	license = "MIT",
-    description = 'Automagically discover urls in a django application, similar to the Ruby on Rails Controller/Action/View implementation.',
+    name='django-url-framework',
+    version=version,
+    license="MIT",
+    description='Automagically discover urls in a django application, similar to the Ruby on Rails Controller/Action/View implementation.',
     author='Dmitri Fedortchenko',
     author_email='d@angelhill.net',
     url='https://github.com/zeraien/django-url-framework/',
