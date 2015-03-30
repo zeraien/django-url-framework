@@ -242,43 +242,8 @@ class ActionController(object):
                 
                 Default: False
             
-    Actions can have the following function attributes:
-        Also decorators are now available for all of the below.
-
-        disable_filters
-            Disable before_filter and after_filter functions.
-    
-        template_name
-            Force a specific template name
-    
-        ajax_template_name
-            Force a specific template name for AJAX requests
-        
-        allowed_methods
-            An array or tuple of http methods permitted to access this action, can also be a string.
-
-        urlconf
-            A custom url configuration for this action, just like in Django's urls.py.
-            The custom urlconf applies after the urlconf for the controller.
-        
-        urlconf_erase
-            Whether to erase the default URL-conf for this action and just keep the custom one
-            
-        url_parameters
-            A string representing the argument part of the URL for this action, for instance:
-            The action 'user' is given the URL /user/, by adding r'(?P<user_id>\d+)' as the
-            url_parameters switch, the URL becomes /user/(?P<user_id>\d+)/.
-            The action function has to accept the specified arguments as method parameters.
-
-        named_url
-            A named url that django can use to call this function. Default is controller_action
-
-        action_name
-            Set a name for the action
-        
-        action_prefix
-            Assign a prefix for the action, applies even if
-            you set action_name (template name is based on action_name, sans prefix)
+    Actions can be decorated with a number of features and settings, such as different names, urls and http method access rules.
+    See the `django_url_framework.decorators` package.
     
     The prefixes will not be taken into account when determining template filenames.
     

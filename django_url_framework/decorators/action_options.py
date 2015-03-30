@@ -13,6 +13,8 @@ def prefix(action_prefix):
     """
     Assign a prefix for the action, applies even if
     you set action_name (template name is based on action_name, sans prefix)
+
+    The prefix will not be taken into account when determining template filenames.
     """
     def decorator(action_function):
         action_function.action_prefix = action_prefix
