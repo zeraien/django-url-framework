@@ -235,7 +235,7 @@ class ActionController(object):
 
                 Default: html
 
-        ignore_ajax
+        no_ajax_prefix
                 This controller ignores template file name changes based on the ajax nature of a request.
                 If this is False, the template file will be prefixed with _ (underscore) for all ajax requests.
                 
@@ -250,7 +250,7 @@ class ActionController(object):
     template_extension = "html"
     template_prefix = None
     no_subdirectories = False
-    ignore_ajax = False
+    no_ajax_prefix = False
     controller_prefix = None
     controller_name = None
     consume_urlconf_keyword_arguments = None
@@ -268,7 +268,9 @@ class ActionController(object):
         self._controller_name_sans_prefix = get_controller_name(self.__class__, with_prefix=False)
         self._flash_cache = None
         self._template_context = {}
+        # backwards compat, ignore_ajax is deprecated, remove 2017-01-01
         self._ignore_ajax = getattr(self, 'ignore_ajax', False)
+        self._ignore_ajax = getattr(self, 'no_ajax_prefix', self._ignore_ajax)
         self._is_ajax = request.is_ajax()
         self._url_params = url_params
 
