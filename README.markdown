@@ -101,10 +101,56 @@ You can easily access your URLs using django's built-in `{% url ... %}` tag. Sim
 There is also a helper tag for faster linking within the same controller.
 `{% go_action remove %}` will take you to `/cart/remove/`. To use it, `{% load url_framework %}` in your templates.
 
+### Controller names
+
+The controller name is derived from it's class name, by converting camelcase into underscores.
+For instance `FooController` is simple `foo`, while `FooBarController` becomes `foo_bar`.
+
+You can give the controller a custom name with the `controller_name` parameter:
+```python
+class Controller(ActionController):
+  controller_name = "foo"
+```
+
+### Template filenames
+
+By default templates are stored in the subdirectory with the controller's name, and the templates are given the same filename as the action name.
+If a request is determinned to be AJAX in nature, the template filename is prefixed with an underscore.
+Example:
+````python
+class FooController(ActionController):
+    def foo_action(self, request):
+      return {}
+```
+
+File structure:
+```
+/foo/foo_action.html
+/foo/_foo_action.html <--- for AJAX requests.
+```
+
+You can disable this prefixing on a per action or per controller level.
+
+For all actions in a controller:
+````python
+class FooController(ActionController):
+    no_ajax_prefix = True
+```
+
+For a single action:
+````python
+from django_url_framework.decorators.action_options
+class FooController(ActionController):
+    @no_ajax_prefix
+    def foo_action(self, request):
+      return {}
+```
+
+
 ## Action names
 
 ````python
-class Controller(ActionController):
+class FooController(ActionController):
     def action(self, request):
       return {}
 ```
