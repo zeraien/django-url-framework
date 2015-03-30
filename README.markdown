@@ -153,3 +153,23 @@ The flash messages can be either messages or error messages. The flash object is
 You can override `_before_filter` and/or `_after_filter` to perform certain actions and checks before or after an action. Read more in `ActionController` docs.
 
 These methods accept the "request" parameter which is an HTTP request object for this request.
+
+For example, to require login on all actions in a single controller, use the login_required decorator provided by django-url-framework. The decorator also works on individual actions.
+
+```python
+from django_url_framework.decorators import login_required
+class AccountController(ActionController):
+
+    @login_required
+    def _before_filter(self, request):
+        pass
+```
+
+## Custom template extensions
+When using jade or something similar you can specify a custom extension for all templates in the controller.
+
+```python
+class AccountController(ActionController):
+    #custom extension for all templates in this controller
+    template_extension = "jade"
+```
