@@ -14,7 +14,9 @@ Each action and controller can override certain global settings such as using a 
 
 From pypi:
 
-    pip install django-url-framework
+```
+pip install django-url-framework
+```
 
 Alternatively just check out the source here and run `python setup.py install`
 
@@ -22,69 +24,77 @@ Alternatively just check out the source here and run `python setup.py install`
 
 ### settings.py
 
-	INSTALLED_APPS = (
-	  ...,
-	  'django_url_framework',
-	  ...
-	)
-
+```python
+INSTALLED_APPS = (
+  ...,
+  'django_url_framework',
+  ...
+)
+```
 ### urls.py
+```python
+import django_url_framework
+from django.conf import settings
+django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
 
-	import django_url_framework
-	from django.conf import settings
-	django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
-
-	urlpatterns = patterns('',
-	    (r'^', include(django_url_framework.site.urls) ),
-	)
-
+urlpatterns = patterns('',
+    (r'^', include(django_url_framework.site.urls) ),
+)
+```
 
 ## Example
 
 ### Folder structure
 
-	project/
-	  app/
-	      cart_controller.py
-	      foo_controller.py
-	      templates/
-	           cart/
-	              add.html
-	              index.html
-	              remove.html
-	           foo/
-	              bar.html
-
+```
+project/
+  app/
+      cart_controller.py
+      foo_controller.py
+      templates/
+           cart/
+              add.html
+              index.html
+              remove.html
+           foo/
+              bar.html
+```
 
 ### cart_controller.py & foo_controller.py
 
-	class CartController(ActionController):
-	   def edit(self, request, id = None):
-	      return {}
-	   def remove(self, request, id)
-	      return {}
-	   def index(self, request):
-	      return {}
+```python
+class CartController(ActionController):
+   def edit(self, request, id = None):
+      return {}
+   def remove(self, request, id)
+      return {}
+   def index(self, request):
+      return {}
 
-	class FooController(ActionController):
-	   def index(self, request, object_id = None):
-	      return {}
-	   def bar(self, request):
-	      return {}
-	   def bar__delete(self, request):
-	      return {}
+class FooController(ActionController):
+   def index(self, request, object_id = None):
+      return {}
+   def bar(self, request):
+      return {}
+   def bar__delete(self, request):
+      return {}
+```
+
 ### Result
 
 The following URLs will be created:
 
-	/cart/ <- will go to *index action*
-	/cart/edit/
-	/cart/edit/(\d+)/
-	/cart/remove/(\d+)/
-	/foo/
-	/foo/(\d+)/
-    /foo/bar/
-	/foo/bar/delete/
+```
+/cart/ <- will go to *index action*
+/cart/(\w+)/
+/cart/edit/
+/cart/edit/(\w+)/
+/cart/remove/(\w+)/
+/foo/
+/foo/(\w+)/
+/foo/bar/
+/foo/bar/delete/
+```
 
 You can easily access your URLs using django's built-in *url* tag. Simply call *{% url cart_index %}* or *{% url cart_delete id %}* and it will work as you would expect.
 
@@ -96,42 +106,47 @@ There is also a helper tag for faster linking within the same controller.
 In action names, double underscores __ are converted to slashes in the urlconf, so: *action__name* becomes */action/name/*.
 
 Providing a third parameter to an action will create a URLconf for that parameter, like so:
-
-	def action(self, request, object_id):
-		return {}
-
+````python
+def action(self, request, object_id):
+    return {}
+```
 Will allow you to call that action with:
-
-	 /controller/action/(\d+)/ <--- numeric argument
-
+```
+/controller/action/(\w+)/ <--- argument consisting of A-Za-z0-9_
+```
 If you make the argument optional, an additional URLconf entry is created allowing you to call the action without the numeric path.
-
-	def action(self, request, object_id = None):
-		return {}
-
+```python
+def action(self, request, object_id = None):
+    return {}
+```
 Results in:
 
-	 /controller/action/
-	 /controller/action/(\d+)/
+```
+/controller/action/
+/controller/action/(\w+)/  <--- optionalargument consisting of A-Za-z0-9_
+```
 
 ## Flash
 
 The ActionController also has a _flash instance variable that allows you to send messages to the user that can survive a redirect. Simply use 
 
-	self._flash.append("Message")
+```python
+self._flash.append("Message")
 
-	self._flash.error("Error message")
+self._flash.error("Error message")
+```
 
 The flash messages can be either messages or error messages. The flash object is automatically exported into the context and you can use it as such:
 
-	{% for message in flash.get_and_clear %}
+```HTML+Django
+{% for message in flash.get_and_clear %}
 
-	    {% if message.is_error %}<span class='icon-error'></span>{% endif %}
+    {% if message.is_error %}<span class='icon-error'></span>{% endif %}
 
-	    <p class="{{message.type}}">{{message}}</p>
-	    
-	{% endfor %}
-
+    <p class="{{message.type}}">{{message}}</p>
+    
+{% endfor %}
+```
 
 ## Before and After each action
 
