@@ -4,6 +4,7 @@ from django.http import *
 import re
 import sys
 from django.utils.safestring import SafeUnicode
+import warnings
 from django_url_framework.helper import ApplicationHelper
 from django.utils.translation import ugettext as _
 from django.conf.urls import patterns, url, include
@@ -268,9 +269,13 @@ class ActionController(object):
         self._controller_name_sans_prefix = get_controller_name(self.__class__, with_prefix=False)
         self._flash_cache = None
         self._template_context = {}
-        # backwards compat, ignore_ajax is deprecated, remove 2017-01-01
-        self._ignore_ajax = getattr(self, 'ignore_ajax', False)
-        self._ignore_ajax = getattr(self, 'no_ajax_prefix', self._ignore_ajax)
+
+        if hasattr(self, 'ignore_ajax'):
+            warnings.warn("ActionController.ignore_ajax is deprecated, remove 2017-01-01", DeprecationWarning)
+            self._no_ajax_prefix = getattr(self, 'ignore_ajax', False)
+        else:
+            self._no_ajax_prefix = getattr(self, 'no_ajax_prefix', False)
+
         self._is_ajax = request.is_ajax()
         self._url_params = url_params
 
@@ -322,7 +327,13 @@ class ActionController(object):
     def _view_wrapper(self, action_func, *args, **kwargs):
         self._action_name = self._get_action_name(action_func)
         self._action_func = action_func
-        self._ignore_ajax = self._ignore_ajax or getattr(action_func, 'ignore_ajax', False)
+
+        if hasattr(action_func, 'ignore_ajax'):
+            warnings.warn("action.ignore_ajax is deprecated, remove 2017-01-01", DeprecationWarning)
+            self._no_ajax_prefix = self._no_ajax_prefix or getattr(action_func, 'ignore_ajax', False)
+        else:
+            self._no_ajax_prefix = self._no_ajax_prefix or getattr(action_func, 'no_ajax_prefix', False)
+
         self._action_name_sans_prefix = self._get_action_name(action_func, with_prefix=False)
         
         if hasattr(action_func,'allowed_methods'):
@@ -486,14 +497,14 @@ class ActionController(object):
         Error template: foo/list__error.html
         """
         template_name = None
-        if self._is_ajax and self._ignore_ajax==False and hasattr(self._on_exception,'ajax_template_name'):
+        if self._is_ajax and self._no_ajax_prefix==False and hasattr(self._on_exception,'ajax_template_name'):
             template_name = self._on_exception.ajax_template_name
         elif hasattr(self._on_exception,'template_name'):
             template_name = self._on_exception.template_name
             
         if template_name is None:
             if getattr(self._on_exception, 'use_action_specific_template', False) == False:
-                if self._is_ajax and self._ignore_ajax==False:
+                if self._is_ajax and self._no_ajax_prefix==False:
                     template_name = "_error.%(ext)s"
                 else:
                     template_name = "error.%(ext)s"
@@ -501,7 +512,7 @@ class ActionController(object):
                 template_name_data = {'controller': self._template_prefix,
                                       'action': self._action_name+"__error",
                                       'ext': self._template_extension}
-                if self._is_ajax and self._ignore_ajax == False:
+                if self._is_ajax and self._no_ajax_prefix == False:
                     template_name = self._ajax_template_string % template_name_data
                 else:
                     template_name = self._template_string % template_name_data
@@ -533,7 +544,7 @@ class ActionController(object):
                                          'action':self._action_name,
                                          'ext':self._template_extension}
 
-            if self._is_ajax and self._ignore_ajax==False:
+            if self._is_ajax and self._no_ajax_prefix==False:
                 if hasattr(self._action_func, 'ajax_template_name'):
                     template_name = self._action_func.ajax_template_name
                 else:
