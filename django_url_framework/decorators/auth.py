@@ -69,3 +69,4 @@ def permission_required(perm, login_url=None):
     enabled, redirecting to the log-in page if necessary.
     """
     return user_passes_test(lambda u: u.has_perm(perm), login_url=login_url)
+

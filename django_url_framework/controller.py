@@ -243,6 +243,7 @@ class ActionController(object):
                 Default: False
             
     Actions can have the following function attributes:
+        Also decorators are now available for all of the below.
 
         disable_filters
             Disable before_filter and after_filter functions.
