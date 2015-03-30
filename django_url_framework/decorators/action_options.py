@@ -35,6 +35,11 @@ def named_url(_named_url):
         return action_function
     return decorator
 
+def no_ajax_prefix(action_function):
+    """Do not prefix template filenames with _ if a request is AJAX."""
+    action_function.ignore_ajax = True
+    return action_function
+
 def ajax_template_name(_template_name):
     """template filename for ajax responses"""
     def decorator(action_function):
