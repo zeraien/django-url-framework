@@ -88,8 +88,7 @@ def get_controller_urlconf(controller_class, site=None):
 
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
-            for line in action_func.urlconf:
-                new_urlconf = r'^%s$' % line
+            for new_urlconf in action_func.urlconf:
                 action_urlpatterns += patterns('', url(new_urlconf, wrapped_call, name=named_url), )
         
         if getattr(action_func, 'urlconf_erase', False) == False:
