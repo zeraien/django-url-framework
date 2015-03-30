@@ -2,3 +2,4 @@ build
 dist
 MANIFEST
 .idea
+django_url_framework.egg-info/
