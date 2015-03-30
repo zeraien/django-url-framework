@@ -2,11 +2,11 @@ The django-url-framework will help you get your django applications done faster.
 
 It automatically detects urls in a django application, similar to the way Ruby on Rails does it with the Controller-Action-View implementation.
 
-Controllers are created in each django application with a predefined file naming scheme (*foo_controller.py*) and extending ActionController. The ActionController contains methods often used in a web context, and does common request-related processing.
+Controllers are created in each django application with a predefined file naming scheme (`foo_controller.py`) and extending `ActionController`. The `ActionController` contains methods often used in a web context, and does common request-related processing.
 
 Each application can have multiple controllers thus allowing for smaller classes in a larger application.
 
-Each function not starting with an underscore becomes it's own action. By simply returning a dictionary from the action, it will be rendered with the template named using the *controller/action.html* naming scheme.
+Each function not starting with an underscore becomes it's own action. By simply returning a dictionary from the action, it will be rendered with the template named using the `controller/action.html` naming scheme.
 
 Each action and controller can override certain global settings such as using a custom template name or giving the action (or controller) a custom name.
 
