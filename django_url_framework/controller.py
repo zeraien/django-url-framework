@@ -12,10 +12,8 @@ from django_url_framework.exceptions import InvalidActionError
 from django_url_framework.exceptions import InvalidControllerError
 
 def get_controller_name(controller_class, with_prefix = True):
-    controller_name = None
-    if hasattr(controller_class, 'controller_name'):
-        controller_name = controller_class.controller_name
-    else:
+    controller_name = getattr(controller_class, 'controller_name', None)
+    if controller_name is None:
         name_ = [controller_class.__name__[0]]
         prev = ''
         for l in re.sub(r"Controller$",'',controller_class.__name__[1:]):
@@ -25,8 +23,9 @@ def get_controller_name(controller_class, with_prefix = True):
                 name_.append(l)
             prev = l
         controller_name = ''.join(name_).lower()
-        
-    if with_prefix and hasattr(controller_class, 'controller_prefix'):
+
+    controller_prefix = getattr(controller_class, 'controller_prefix', None)
+    if with_prefix and controller_prefix not in (None, ''):
         controller_name = controller_class.controller_prefix + controller_name
     return controller_name
 
@@ -39,6 +38,8 @@ def autoview_function(site, request, controller_name, controller_class, action_n
             helper = ApplicationHelper#self.helpers.get(controller_name, ApplicationHelper)
             kwargs_all = kwargs.copy()
             if hasattr(controller_class, 'consume_urlconf_keyword_arguments'):
+                if type(controller_class.consume_urlconf_keyword_arguments) not in (list, tuple):
+                    controller_class.consume_urlconf_keyword_arguments = []
                 for kwarg in controller_class.consume_urlconf_keyword_arguments:
                     if kwarg in kwargs:
                         del(kwargs[kwarg])
@@ -281,7 +282,15 @@ class ActionController(object):
     The prefixes will not be taken into account when determining template filenames.
     
     """
-    
+    template_extension = "html"
+    template_prefix = None
+    no_subdirectories = False
+    ignore_ajax = False
+    controller_prefix = None
+    controller_name = None
+    consume_urlconf_keyword_arguments = None
+    urlconf_prefix = None
+
     def __init__(self, site, request, helper_class, url_params):
         self._site = site
         self._helper = helper_class(self)
@@ -300,12 +309,12 @@ class ActionController(object):
 
         self._template_extension = getattr(self, 'template_extension', 'html')
 
-        if hasattr(self, 'template_prefix'):
+        if getattr(self, 'template_prefix') is not None:
             self._template_prefix = getattr(self, 'template_prefix')
         else:
             self._template_prefix = self._controller_name_sans_prefix
             
-        if hasattr(self, 'no_subdirectories'):
+        if getattr(self, 'no_subdirectories', False):
             self._template_string = "%(controller)s_%(action)s.%(ext)s"
             self._ajax_template_string = "_%(controller)s_%(action)s.%(ext)s"
         else:
