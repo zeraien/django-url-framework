@@ -25,6 +25,7 @@ class ApplicationHelper(object):
         if not named_url:
             if action:
                 try:
+                    action = action.strip('"\'')
                     action_func = get_actions(Controller,with_prefix=False)[action]
                 except KeyError:
                     import traceback
