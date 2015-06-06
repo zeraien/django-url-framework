@@ -447,13 +447,13 @@ class ActionController(object):
                 charset = self._response._charset
             self._response['content-type'] = "%s; charset=%s" % (mimetype, charset)
     
-    def _as_json(self, data, status_code = 200, *args, **kwargs):
-        """Render the returned dictionary as a JSON object."""
+    def _as_json(self, data, status_code = 200, default=None, *args, **kwargs):
+        """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
         import json
         if self._is_ajax and 'mimetype' not in kwargs:
-            kwargs['mimetype'] = 'application/json';
+            kwargs['mimetype'] = 'application/json'
         self._template_context = data
-        response = self.__wrap_after_filter(json.dumps, self._template_context)
+        response = self.__wrap_after_filter(json.dumps, self._template_context, default=default)
         if type(response) in (str, unicode, SafeUnicode):
             return self.__wrapped_print(response, status_code=status_code, *args, **kwargs)
         else:
