@@ -49,6 +49,7 @@ class FlashManager(object):
         return len(self) > 0
     
     def clear(self):
+        self._messages_cache = []
         if self.SESSION_KEY in self.request.session:
             del(self.request.session[self.SESSION_KEY])
             self.request.session.save()
