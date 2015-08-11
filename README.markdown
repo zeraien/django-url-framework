@@ -35,6 +35,8 @@ INSTALLED_APPS = (
 ```python
 import django_url_framework
 from django.conf import settings
+from django.conf.urls import patterns, include
+
 django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
 
 urlpatterns = patterns('',
@@ -66,7 +68,7 @@ project/
 class CartController(ActionController):
     def edit(self, request, id = None):
         return {}
-    def remove(self, request, id)
+    def remove(self, request, id):
         return {}
     def index(self, request):
       return {}
