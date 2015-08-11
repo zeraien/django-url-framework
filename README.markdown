@@ -65,6 +65,8 @@ project/
 ### cart_controller.py & foo_controller.py
 
 ```python
+from django_url_framework.controller import ActionController
+
 class CartController(ActionController):
     def edit(self, request, id = None):
         return {}
@@ -72,6 +74,10 @@ class CartController(ActionController):
         return {}
     def index(self, request):
       return {}
+```
+
+```python
+from django_url_framework.controller import ActionController
 
 class FooController(ActionController):
     def index(self, request, object_id = None):
