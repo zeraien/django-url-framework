@@ -18,7 +18,7 @@ from django_url_framework.controller import get_controller_urlconf
 from django.utils.translation import ugettext as _
 from django.http import Http404
 
-from django.utils.importlib import import_module
+from importlib import import_module
 
 
 class Site(object):
