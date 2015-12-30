@@ -7,7 +7,10 @@ from django.utils.safestring import SafeUnicode
 import warnings
 from django_url_framework.helper import ApplicationHelper
 from django.utils.translation import ugettext as _
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
+from django import VERSION
+if VERSION[1]<9:
+    from django.conf.urls import patterns
 
 from django_url_framework.exceptions import InvalidActionError
 from django_url_framework.exceptions import InvalidControllerError
@@ -66,17 +69,24 @@ def _get_arg_name_and_default(action_func):
         return arguments[2], has_default
     return None, has_default
 
+def _patterns(*args):
+    if VERSION[1]>=9:
+        return list(args)
+    else:
+        from django.conf.urls import patterns
+        return patterns('', *args)
+
 def get_controller_urlconf(controller_class, site=None):
     controller_name = get_controller_name(controller_class)
     actions = get_actions(controller_class)
-    urlpatterns = patterns('')
-    urlpatterns_with_args = patterns('')
-    def wrap_call(controller_name, action_name, action_func):
+    urlpatterns = _patterns()
+    urlpatterns_with_args = _patterns()
+    def wrap_call(_controller_name, _action_name, _action_func):
         """Wrapper for the function called by the url."""
         def wrapper(*args, **kwargs):
             request, args = args[0], args[1:]
-            return autoview_function(site, request, controller_name, controller_class, action_name, *args, **kwargs)
-        return wraps(action_func)(wrapper)
+            return autoview_function(site, request, _controller_name, controller_class, _action_name, *args, **kwargs)
+        return wraps(_action_func)(wrapper)
 
     for action_name, action_func in actions.items():
         named_url = '%s_%s' % (get_controller_name(controller_class, with_prefix=False), get_action_name(action_func) )
@@ -84,13 +94,13 @@ def get_controller_urlconf(controller_class, site=None):
         replace_dict = {'action':action_name.replace("__","/")}
         wrapped_call = wrap_call(controller_name, action_name, action_func)
         urlconf_prefix = getattr(controller_class, 'urlconf_prefix', None)
-        action_urlpatterns = patterns('')
-        index_action_with_args_urlconf = patterns('')
+        action_urlpatterns = _patterns()
+        index_action_with_args_urlconf = _patterns()
 
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
             for new_urlconf in action_func.urlconf:
-                action_urlpatterns += patterns('', url(new_urlconf, wrapped_call, name=named_url), )
+                action_urlpatterns += _patterns(url(new_urlconf, wrapped_call, name=named_url))
         
         if getattr(action_func, 'urlconf_erase', False) == False:
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
@@ -101,43 +111,33 @@ def get_controller_urlconf(controller_class, site=None):
                 object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
-                    index_action_with_args_urlconf += patterns('',
-                                                   url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url)
-                    )
+                    index_action_with_args_urlconf += _patterns(url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url))
                 if has_default:
-                    action_urlpatterns += patterns('',
-                                                   url(r'^$', wrapped_call, name=named_url),
-                                                   )
+                    action_urlpatterns += _patterns(url(r'^$', wrapped_call, name=named_url))
 
             else:
                 if hasattr(action_func, 'url_parameters'):
                     arguments = action_func.url_parameters
                     replace_dict['url_parameters'] = arguments
-                    action_urlpatterns += patterns('',
-                        url(r'^%(action)s/%(url_parameters)s$' % replace_dict, wrapped_call, name=named_url)
-                    )
+                    action_urlpatterns += _patterns(url(r'^%(action)s/%(url_parameters)s$' % replace_dict, wrapped_call, name=named_url))
 
                 else:
                     object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
                     if object_id_arg_name is not None:
                         replace_dict['object_id_arg_name'] = object_id_arg_name
-                        action_urlpatterns += patterns('',
-                                                       url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url)
-                        )
+                        action_urlpatterns += _patterns(url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url))
                     if has_default:
-                        action_urlpatterns += patterns('',
-                                                       url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url),
-                                                       )
+                        action_urlpatterns += _patterns(url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url))
 
         if urlconf_prefix:
-            action_urlpatterns_with_prefix = patterns('')
+            action_urlpatterns_with_prefix = _patterns()
             for _urlconf in urlconf_prefix:
-                action_urlpatterns_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns)))
+                action_urlpatterns_with_prefix+=_patterns(url(_urlconf, include(action_urlpatterns)))
             urlpatterns+=action_urlpatterns_with_prefix
 
-            action_urlpatterns_with_args_with_prefix = patterns('')
+            action_urlpatterns_with_args_with_prefix = _patterns()
             for _urlconf in urlconf_prefix:
-                action_urlpatterns_with_args_with_prefix+=patterns('',(_urlconf, include(action_urlpatterns_with_args_with_prefix)))
+                action_urlpatterns_with_args_with_prefix+=_patterns(url(_urlconf, include(action_urlpatterns_with_args_with_prefix)))
 
             urlpatterns_with_args+=action_urlpatterns_with_args_with_prefix
         else:

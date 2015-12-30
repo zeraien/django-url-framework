@@ -11,12 +11,14 @@ from django_url_framework.controller import ActionController
 from django_url_framework.controller import InvalidControllerError
 from django_url_framework.controller import InvalidActionError
 from django_url_framework.controller import get_actions
+from django_url_framework.controller import _patterns
 from django_url_framework.controller import get_action_name
 from django_url_framework.controller import get_controller_name
 from django_url_framework.controller import get_controller_urlconf
 
 from django.utils.translation import ugettext as _
 from django.http import Http404
+from django.conf.urls import include, url
 
 from importlib import import_module
 
@@ -118,10 +120,9 @@ class Site(object):
                     found_controller[0].close()
             
     def _get_urls(self):
-        from django.conf.urls import patterns, include
-        urlpatterns = patterns('')
+        urlpatterns = _patterns()
         
         for controller_name, controller_class in self.controllers.items():
-            urlpatterns += patterns('', (r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
+            urlpatterns += _patterns(url(r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
         return urlpatterns
     urls = property(_get_urls)

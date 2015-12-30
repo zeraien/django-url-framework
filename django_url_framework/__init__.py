@@ -1,4 +1,4 @@
-VERSION = (0, 3, 5)
+VERSION = (0, 3, 7)
 
 try:
     from django_url_framework.site import Site
