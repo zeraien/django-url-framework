@@ -386,10 +386,15 @@ class ActionController(object):
             elif filter_response is not None:
                 return filter_response
         
+        action_response = None
         if hasattr(self, 'do_not_pass_request'):
-            return wrapped_func(*args, **kwargs)
+            action_response = wrapped_func(*args, **kwargs)
         else:
-            return wrapped_func(self._request, *args, **kwargs)
+            action_response = wrapped_func(self._request, *args, **kwargs)
+        if type(action_response) is dict:
+            self._template_context.update(action_response)
+
+        return self._template_context
         
     def __wrap_after_filter(self, wrapped_func, *args, **kwargs):
         if getattr(self, '_after_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
