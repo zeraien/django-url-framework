@@ -31,13 +31,14 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
         return wraps(view_func, assigned=available_attrs(view_func))(_wrapped_view)
     return decorator
 
-def must_be_member_of_group(group_name, redirect_field_name=REDIRECT_FIELD_NAME):
+def must_be_member_of_group(group_name=None, redirect_field_name=REDIRECT_FIELD_NAME, login_url=None):
+    if type(group_name) not in (list, tuple):
+        group_name = [group_name]
     actual_decorator = user_passes_test(
-        lambda u: (u.is_superuser or u.groups.filter(name=group_name).count() > 0),
+        lambda u: (u.is_superuser or u.groups.filter(name__in=group_name).count() > 0),
+        login_url=login_url,
         redirect_field_name=redirect_field_name
     )
-    # if function:
-    #   return actual_decorator(function)
     return actual_decorator
 
 def superuser_required(function = None, redirect_field_name=REDIRECT_FIELD_NAME):
