@@ -12,6 +12,8 @@ Each action and controller can override certain global settings such as using a 
 
 ## Install
 
+[![Join the chat at https://gitter.im/zeraien/django-url-framework](https://badges.gitter.im/zeraien/django-url-framework.svg)](https://gitter.im/zeraien/django-url-framework?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 From pypi:
 
 ```
