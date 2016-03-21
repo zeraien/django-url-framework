@@ -1,5 +1,7 @@
 The django-url-framework will help you get your django applications done faster.
 
+[![Join the chat at https://gitter.im/zeraien/django-url-framework](https://badges.gitter.im/zeraien/django-url-framework.svg)](https://gitter.im/zeraien/django-url-framework?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 It automatically detects urls in a django application, similar to the way Ruby on Rails does it with the Controller-Action-View implementation.
 
 Controllers are created in each django application with a predefined file naming scheme (`foo_controller.py`) and extending `ActionController`. The `ActionController` contains methods often used in a web context, and does common request-related processing.
