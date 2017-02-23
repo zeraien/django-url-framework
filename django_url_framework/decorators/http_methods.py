@@ -17,13 +17,13 @@ def GET(action_function):
     return _append_method(action_function, "GET")
 
 
-def OPTION(action_function):
+def OPTIONS(action_function):
     """
-    Allow this action to be called with only OPTION method.
+    Allow this action to be called with only OPTIONS method.
     If multiple decorators are given, it will allow multiple http methods.
     By default all http methods are permitted on all actions.
     """
-    return _append_method(action_function, "OPTION")
+    return _append_method(action_function, "OPTIONS")
 
 
 def PUT(action_function):
