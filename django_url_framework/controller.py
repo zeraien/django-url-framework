@@ -100,7 +100,7 @@ def get_controller_urlconf(controller_class, site=None):
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
             for new_urlconf in action_func.urlconf:
-                action_urlpatterns += _patterns(url(new_urlconf, wrapped_call, name=named_url))
+                action_urlpatterns += _patterns(url(new_urlconf, view=wrapped_call, name=named_url))
         
         if getattr(action_func, 'urlconf_erase', False) == False:
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
@@ -111,23 +111,23 @@ def get_controller_urlconf(controller_class, site=None):
                 object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
-                    index_action_with_args_urlconf += _patterns(url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url))
+                    index_action_with_args_urlconf += _patterns(url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, view=wrapped_call, name=named_url))
                 if has_default:
-                    action_urlpatterns += _patterns(url(r'^$', wrapped_call, name=named_url))
+                    action_urlpatterns += _patterns(url(r'^$', view=wrapped_call, name=named_url))
 
             else:
                 if hasattr(action_func, 'url_parameters'):
                     arguments = action_func.url_parameters
                     replace_dict['url_parameters'] = arguments
-                    action_urlpatterns += _patterns(url(r'^%(action)s/%(url_parameters)s$' % replace_dict, wrapped_call, name=named_url))
+                    action_urlpatterns += _patterns(url(r'^%(action)s/%(url_parameters)s$' % replace_dict, view=wrapped_call, name=named_url))
 
                 else:
                     object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
                     if object_id_arg_name is not None:
                         replace_dict['object_id_arg_name'] = object_id_arg_name
-                        action_urlpatterns += _patterns(url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, wrapped_call, name=named_url))
+                        action_urlpatterns += _patterns(url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, view=wrapped_call, name=named_url))
                     if has_default:
-                        action_urlpatterns += _patterns(url(r'^%(action)s/$' % replace_dict, wrapped_call, name=named_url))
+                        action_urlpatterns += _patterns(url(r'^%(action)s/$' % replace_dict, view=wrapped_call, name=named_url))
 
         if urlconf_prefix:
             action_urlpatterns_with_prefix = _patterns()
@@ -402,6 +402,8 @@ class ActionController(object):
             if self._after_filter.func_code.co_argcount >= 2:
                 filter_response = self._after_filter(request=self._request)
             else:
+                warnings.warn("_after_filter and _before_filter should always take `request` as second argument.",
+                              DeprecationWarning)
                 filter_response = self._after_filter()
                 
             if type(filter_response) is dict:
