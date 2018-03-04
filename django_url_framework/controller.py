@@ -3,6 +3,8 @@ from functools import wraps
 from django.http import *
 import re
 import sys
+
+from django.template.context import make_context
 from django.utils.safestring import SafeUnicode
 import warnings
 from django_url_framework.helper import ApplicationHelper
@@ -561,12 +563,9 @@ class ActionController(object):
             else:
                 template_name = self._template_string % template_replacement_data
             kwargs['template_name'] = template_name
-            
-        if 'context_instance' not in kwargs:
-            kwargs['context_instance'] = RequestContext(self._request)
 
         self._template_context.update(dictionary)
-        
+
         if getattr(self, '_before_render_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._before_render_runonce = True
             before_render_response = self._before_render()
@@ -580,7 +579,9 @@ class ActionController(object):
         # if obj is not None:
         #     populate_xheaders(self._request, self._response, obj.__class__, obj.pk)
 
-        self._response.content = loader.render_to_string(dictionary=self._template_context, *args, **kwargs)
+        self._response.content = loader.render_to_string(template_name=kwargs['template_name'],
+                                                         context=self._template_context,
+                                                         request=self._request)
         return self._response
     
     _render = __wrapped_render

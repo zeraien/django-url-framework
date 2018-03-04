@@ -4,6 +4,8 @@ import dircache
 import imp
 import os
 from functools import wraps
+
+from django.apps import apps
 from django.conf import settings
 
 from django_url_framework.helper import ApplicationHelper
@@ -40,36 +42,35 @@ class Site(object):
             exclude_apps = (exclude_apps,)
         
         if len(include_apps) == 0:
-            include_apps = settings.INSTALLED_APPS
+            include_apps = apps.app_configs.keys()
         
-        for app in settings.INSTALLED_APPS:
+        for app_config in apps.app_configs.values():
+
             must_skip = False
-            if app.endswith('django_url_framework'):
+            app_name = app_config.name
+            if app_name.endswith('django_url_framework'):
                 continue
             
             for inc in include_apps:
-                if re.search(inc, app):
+                if re.search(inc, app_name):
                     must_skip = False
                     break
                 else:
                     must_skip = True
             for excl in exclude_apps:
-                if re.search(excl, app):
+                if re.search(excl, app_name):
                     must_skip = True
                     break
             if must_skip:
                 continue
             try:
                 available_controllers = []
-                app_path = import_module(app).__path__
-                if app_path[0][-1] != os.path.sep:
-                    app_path[0] = app_path[0]+os.path.sep
-                    
-                for f in dircache.listdir(app_path[0]):
+                app_path = app_config.path
+                for f in dircache.listdir(app_path):
                     if f.endswith('_controller.py'):
                         available_controllers.append(f[:-14])
                 self.load_controllers(app_path, available_controllers)
-            except AttributeError, e:
+            except AttributeError as e:
                 self.logger.exception(e)
                 continue
                 
@@ -79,15 +80,14 @@ class Site(object):
         for controller_file in controllers:
             """Load controller"""
             try:
-                found_controller = imp.find_module('%s_controller' % controller_file, app_path)
-            except ImportError, e:
+                found_controller = imp.find_module('%s_controller' % controller_file, [app_path])
+            except ImportError:
                 self.logger.warning("Failed to find proper controller in %s" % controller_file, exc_info=True)
                 continue
             else:
                 controller_module = imp.load_module('%s_controller' % controller_file, *found_controller)
                 self.logger.debug("Loaded controller from %s" % controller_file)
                 for controller_class_name in dir(controller_module):
-                    # test_name = '%sController' % ''.join([i.title() for i in controller_file.split('_')])
                     if not controller_class_name.endswith('Controller'):
                         continue
                         
@@ -102,9 +102,8 @@ class Site(object):
             
                         """Load helper"""
                         try:
-                            found_helper = imp.find_module('%s_helper' % controller_file, app_path)
-                        except ImportError, e:
-                            self.logger.debug("No helper found for %s" % controller_name)
+                            found_helper = imp.find_module('%s_helper' % controller_file, [app_path])
+                        except ImportError:
                             continue
                         else:
                             helper_module = imp.load_module('%s_helper' % controller_file, *found_helper)

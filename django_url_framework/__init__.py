@@ -1,4 +1,5 @@
-VERSION = (0, 3, 11)
+VERSION = (0, 3, 12)
+default_app_config = 'django_url_framework.apps.URLFrameworkAppConfig'
 
 try:
     from django_url_framework.site import Site

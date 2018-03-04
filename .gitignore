@@ -3,3 +3,5 @@ dist
 MANIFEST
 .idea
 django_url_framework.egg-info/
+duf_test/
+env-test/
