@@ -453,13 +453,13 @@ class ActionController(object):
     def _set_mimetype(self, mimetype, charset = None):
         if mimetype is not None:
             if charset is None:
-                charset = self._response._charset
-            self._response['content-type'] = "%s; charset=%s" % (mimetype, charset)
+                charset = self._response.charset
+            self._response['Content-Type'] = "%s; charset=%s" % (mimetype, charset)
     
     def _as_json(self, data, status_code = 200, default=None, *args, **kwargs):
         """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
         import json
-        if self._is_ajax and 'mimetype' not in kwargs:
+        if 'mimetype' not in kwargs:
             kwargs['mimetype'] = 'application/json'
         self._template_context = data
         response = self.__wrap_after_filter(json.dumps, self._template_context, default=default)
@@ -471,8 +471,8 @@ class ActionController(object):
     def _as_yaml(self, data, default_flow_style = True, status_code = 200, *args, **kwargs):
         """Render the returned dictionary as a YAML object."""
         import yaml
-        if self._is_ajax and 'mimetype' not in kwargs:
-            kwargs['mimetype'] = 'application/yaml';
+        if 'mimetype' not in kwargs:
+            kwargs['mimetype'] = 'application/yaml'
         return self._print(yaml.dump(data, default_flow_style=default_flow_style), status_code=status_code, *args, **kwargs)
         
     def __wrapped_print(self, text, mimetype = 'text/plain', charset=None, status_code=200):
@@ -486,8 +486,8 @@ class ActionController(object):
         self._response.content = text
         return self._response        
 
-    def _print(self, text, mimetype = 'text/plain', charset=None):
-        return self.__wrap_after_filter(self.__wrapped_print, text=text, mimetype=mimetype, charset=charset)
+    def _print(self, text, mimetype = 'text/plain', charset=None, **kwargs):
+        return self.__wrap_after_filter(self.__wrapped_print, text=text, mimetype=mimetype, charset=charset, **kwargs)
 
     def _get_flash(self):
         if self._flash_cache is None:
