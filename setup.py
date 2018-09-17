@@ -13,6 +13,9 @@ setup(
     author_email='d@angelhill.net',
     url='https://github.com/zeraien/django-url-framework/',
     packages=find_packages(),
+    install_requires=[
+          'simplejson>=2.1',
+      ],
     classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',

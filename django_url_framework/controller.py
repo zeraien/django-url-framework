@@ -458,7 +458,11 @@ class ActionController(object):
     
     def _as_json(self, data, status_code = 200, default=None, *args, **kwargs):
         """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
-        import json
+        try:
+            import simplejson as json
+        except ImportError:
+            import json
+
         if 'mimetype' not in kwargs:
             kwargs['mimetype'] = 'application/json'
         self._template_context = data
