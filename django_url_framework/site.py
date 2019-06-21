@@ -42,9 +42,9 @@ class Site(object):
             exclude_apps = (exclude_apps,)
         
         if len(include_apps) == 0:
-            include_apps = apps.app_configs.keys()
+            include_apps = list(apps.app_configs.keys())
         
-        for app_config in apps.app_configs.values():
+        for app_config in list(apps.app_configs.values()):
 
             must_skip = False
             app_name = app_config.name
@@ -121,7 +121,7 @@ class Site(object):
     def _get_urls(self):
         urlpatterns = _patterns()
         
-        for controller_name, controller_class in self.controllers.items():
+        for controller_name, controller_class in list(self.controllers.items()):
             urlpatterns += _patterns(url(r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
         return urlpatterns
     urls = property(_get_urls)

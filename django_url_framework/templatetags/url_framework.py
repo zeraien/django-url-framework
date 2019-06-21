@@ -20,7 +20,7 @@ def go_action(parser, token):
         # split_contents() knows not to split quoted strings.
         tag_data = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires at least one argument" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%r tag requires at least one argument" % token.contents.split()[0])
     return UrlNode(action=tag_data[1], extras=tag_data[2:])
 
 @register.tag
@@ -29,7 +29,7 @@ def url_for(parser, token):
         # split_contents() knows not to split quoted strings.
         tag_data = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires at least one argument" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%r tag requires at least one argument" % token.contents.split()[0])
     return UrlNode(named_url='/'.join(tag_data[1:]))
 
 def reverse_url(helper, named_url = None, action = None, extras = None):

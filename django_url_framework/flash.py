@@ -59,7 +59,7 @@ class FlashManager(object):
         self.clear()
         return messages
 
-    def __nonzero__(self):
+    def __bool__(self):
         return len(self.messages) > 0
 
     def __iter__(self):

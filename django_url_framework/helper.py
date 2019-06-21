@@ -40,5 +40,5 @@ class ApplicationHelper(object):
                 named_url = controller_name
         url = reverse(named_url, args=url_args, kwargs=url_kwargs)
         if url_params is not None:
-            return u'%s?%s' % (url, urlencode(url_params))
+            return '%s?%s' % (url, urlencode(url_params))
         return url

@@ -56,7 +56,7 @@ def autoview_function(site, request, controller_name, controller_class, action_n
             # raise InvalidControllerError()
     # except InvalidControllerError, e:
         # error_msg = _("No such controller: %(controller_name)s") % {'controller_name' : controller_name}
-    except InvalidActionError, e:
+    except InvalidActionError as e:
         error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e.message, 'controller_name' : controller_name}
         
     raise Http404(error_msg)
@@ -90,7 +90,7 @@ def get_controller_urlconf(controller_class, site=None):
             return autoview_function(site, request, _controller_name, controller_class, _action_name, *args, **kwargs)
         return wraps(_action_func)(wrapper)
 
-    for action_name, action_func in actions.items():
+    for action_name, action_func in list(actions.items()):
         named_url = '%s_%s' % (get_controller_name(controller_class, with_prefix=False), get_action_name(action_func) )
         named_url = getattr(action_func, 'named_url', named_url)
         replace_dict = {'action':action_name.replace("__","/")}
@@ -151,14 +151,14 @@ CACHED_ACTIONS = {}
 
 def get_action_name(func, with_prefix = False):
     if callable(func):
-        func_name = func.func_name
+        func_name = func.__name__
         if not re.match(r'^[_\-A-Z0-9]',func_name[0]):
             if hasattr(func, 'action_name'):
                 func_name = func.action_name
             if with_prefix and hasattr(func, 'action_prefix'):
                 func_name = func.action_prefix + func_name
             return func_name
-    raise InvalidActionError(func.func_name)
+    raise InvalidActionError(func.__name__)
 
 def get_actions(controller, with_prefix = True):
     if isinstance(controller, ActionController):
@@ -307,7 +307,7 @@ class ActionController(object):
     def _call_action(self, action_name, *args, **kwargs):
         if action_name in self._actions:
             action_func = self._actions[action_name]
-            action_func = getattr(self, action_func.func_name)
+            action_func = getattr(self, action_func.__name__)
             return self._view_wrapper(action_func,*args, **kwargs)
         else:
             raise InvalidActionError(action_name)
@@ -316,15 +316,15 @@ class ActionController(object):
         return (action_name in get_actions(action_name, with_prefix = with_prefix))
         
     def _get_action_name(self, action_func, with_prefix = True):
-        if not re.match(r'^[_\-A-Z0-9]',action_func.func_name[0]) and callable(action_func):
+        if not re.match(r'^[_\-A-Z0-9]',action_func.__name__[0]) and callable(action_func):
             if hasattr(action_func, 'action_name'):
                 func_name = action_func.action_name
             else:
-                func_name = action_func.func_name
+                func_name = action_func.__name__
             if with_prefix and hasattr(action_func, 'action_prefix'):
                 func_name = action_func.action_prefix + func_name
             return func_name
-        raise InvalidActionError(action_func.func_name)
+        raise InvalidActionError(action_func.__name__)
 
     def _view_wrapper(self, action_func, *args, **kwargs):
         self._action_name = self._get_action_name(action_func)
@@ -353,22 +353,22 @@ class ActionController(object):
         try:
             response = self.__wrap_before_filter(action_func, *args, **kwargs)
 
-            if type(response) is dict:
+            if isinstance(response, dict):
                 return self.__wrap_after_filter(self.__wrapped_render, response, **send_args)
-            elif type(response) in (str,unicode,SafeUnicode):
+            elif isinstance(response, str):
                 return self.__wrap_after_filter(self.__wrapped_print, response, **send_args)
             else:
                 return response
 
-        except Exception, exception:
+        except Exception as exception:
             response = self._on_exception(request=self._request, exception=exception)
             
             if response is None:
-                raise exception, None, sys.exc_info()[-1]
+                raise exception.with_traceback(sys.exc_info()[-1])
             else:
-                if type(response) is dict:
+                if isinstance(response, dict):
                     return self.__wrapped_render(dictionary=response, template_name=self._get_error_template_path())
-                elif type(response) in (str,unicode,SafeUnicode):
+                elif isinstance(response, str):
                     return self.__wrapped_print(text=response, **send_args)
                 else:
                     return response
@@ -378,12 +378,12 @@ class ActionController(object):
         if getattr(self, '_before_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._before_filter_runonce = True
 
-            if self._before_filter.func_code.co_argcount >= 2:
+            if self._before_filter.__code__.co_argcount >= 2:
                 filter_response = self._before_filter(self._request)
             else:
                 filter_response = self._before_filter()
             
-            if type(filter_response) is dict:
+            if isinstance(filter_response, dict):
                 self._template_context.update(filter_response)
             elif filter_response is not None:
                 return filter_response
@@ -392,7 +392,7 @@ class ActionController(object):
             action_response = wrapped_func(*args, **kwargs)
         else:
             action_response = wrapped_func(self._request, *args, **kwargs)
-        if type(action_response) is dict:
+        if isinstance(action_response, dict):
             self._template_context.update(action_response)
             return self._template_context
 
@@ -401,14 +401,14 @@ class ActionController(object):
     def __wrap_after_filter(self, wrapped_func, *args, **kwargs):
         if getattr(self, '_after_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._after_filter_runonce = True
-            if self._after_filter.func_code.co_argcount >= 2:
+            if self._after_filter.__code__.co_argcount >= 2:
                 filter_response = self._after_filter(request=self._request)
             else:
                 warnings.warn("_after_filter and _before_filter should always take `request` as second argument.",
                               DeprecationWarning)
                 filter_response = self._after_filter()
                 
-            if type(filter_response) is dict:
+            if isinstance(filter_response, dict):
                 self._template_context.update(filter_response)
             elif filter_response is not None:
                 return filter_response
@@ -467,7 +467,7 @@ class ActionController(object):
             kwargs['mimetype'] = 'application/json'
         self._template_context = data
         response = self.__wrap_after_filter(json.dumps, self._template_context, default=default)
-        if type(response) in (str, unicode, SafeUnicode):
+        if isinstance(response, str):
             return self.__wrapped_print(response, status_code=status_code, *args, **kwargs)
         else:
             return response
@@ -542,7 +542,7 @@ class ActionController(object):
         dictionary.update({
             'request':self._request,
             'controller_name':self._controller_name,
-            'controller_actions':self._actions.keys(),
+            'controller_actions':list(self._actions.keys()),
             'action_name':self._action_name,
             'controller_helper':self._helper,
             'flash': self._flash,
@@ -573,7 +573,7 @@ class ActionController(object):
         if getattr(self, '_before_render_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._before_render_runonce = True
             before_render_response = self._before_render()
-            if type(before_render_response) is dict:
+            if isinstance(before_render_response, dict):
                 self._template_context.update(before_render_response)
             elif before_render_response is not None:
                 return before_render_response

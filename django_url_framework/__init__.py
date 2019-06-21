@@ -1,4 +1,4 @@
-VERSION = (0, 3, 14)
+VERSION = (0, 4, 0)
 default_app_config = 'django_url_framework.apps.URLFrameworkAppConfig'
 
 try:
@@ -22,5 +22,5 @@ __version__ = str_version
 
 def reraise(exception, info=None):
     import sys
-    raise exception, None, sys.exc_info()[-1]
+    raise exception.with_traceback(sys.exc_info()[-1])
 
