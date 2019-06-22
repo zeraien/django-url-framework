@@ -1,25 +1,16 @@
 import logging
 import re
-import dircache
 import imp
 import os
-from functools import wraps
 
 from django.apps import apps
-from django.conf import settings
 
-from django_url_framework.helper import ApplicationHelper
-from django_url_framework.controller import ActionController
-from django_url_framework.controller import InvalidControllerError
-from django_url_framework.controller import InvalidActionError
-from django_url_framework.controller import get_actions
-from django_url_framework.controller import _patterns
-from django_url_framework.controller import get_action_name
-from django_url_framework.controller import get_controller_name
-from django_url_framework.controller import get_controller_urlconf
+from .helper import ApplicationHelper
+from .controller import ActionController
+from .controller import url_patterns
+from .controller import get_controller_name
+from .controller import get_controller_urlconf
 
-from django.utils.translation import ugettext as _
-from django.http import Http404
 from django.conf.urls import include, url
 
 from importlib import import_module
@@ -66,7 +57,7 @@ class Site(object):
             try:
                 available_controllers = []
                 app_path = app_config.path
-                for f in dircache.listdir(app_path):
+                for f in os.listdir(app_path):
                     if f.endswith('_controller.py'):
                         available_controllers.append(f[:-14])
                 self.load_controllers(app_path, available_controllers)
@@ -119,9 +110,9 @@ class Site(object):
                     found_controller[0].close()
             
     def _get_urls(self):
-        urlpatterns = _patterns()
+        urlpatterns = url_patterns()
         
         for controller_name, controller_class in list(self.controllers.items()):
-            urlpatterns += _patterns(url(r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
+            urlpatterns += url_patterns(url(r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
         return urlpatterns
     urls = property(_get_urls)

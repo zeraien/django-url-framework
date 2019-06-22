@@ -1,7 +1,7 @@
 from django.utils.http import urlencode
 from django.core.urlresolvers import reverse
-from django_url_framework.exceptions import InvalidActionError
-from django_url_framework.exceptions import InvalidControllerError
+from .exceptions import InvalidActionError
+from .exceptions import InvalidControllerError
 
 class ApplicationHelper(object):
     """ApplicationHelpers can contain functions useful in a controller. Each controller is assigned a helper.
@@ -11,7 +11,7 @@ class ApplicationHelper(object):
         self.controller = controller
     
     def url_for(self, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None):
-        from django_url_framework.controller import get_actions, get_controller_name
+        from .controller import get_actions, get_controller_name
         
         if controller:
             controller_name = controller

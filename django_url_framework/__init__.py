@@ -2,11 +2,11 @@ VERSION = (0, 4, 0)
 default_app_config = 'django_url_framework.apps.URLFrameworkAppConfig'
 
 try:
-    from django_url_framework.site import Site
-    from django_url_framework.controller import ActionController
-    from django_url_framework.exceptions import InvalidActionError
-    from django_url_framework.exceptions import InvalidControllerError
-    from django_url_framework.helper import ApplicationHelper
+    from .site import Site
+    from .controller import ActionController
+    from .exceptions import InvalidActionError
+    from .exceptions import InvalidControllerError
+    from .helper import ApplicationHelper
     site = Site()
 except ImportError:
     #todo this is an ugly hack for setuptools to load version, fix
