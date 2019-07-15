@@ -9,7 +9,7 @@ from .helper import ApplicationHelper
 from django.utils.translation import ugettext as _
 from django.conf.urls import url, include
 from django import VERSION
-if VERSION[1]<9:
+if VERSION[:2]<(1,9):
     from django.conf.urls import patterns
 
 from .exceptions import InvalidActionError
@@ -70,10 +70,9 @@ def _get_arg_name_and_default(action_func):
     return None, has_default
 
 def url_patterns(*args):
-    if VERSION[1]>=9:
+    if VERSION[:2]>=(1,9):
         return list(args)
     else:
-        from django.conf.urls import patterns
         return patterns('', *args)
 
 def get_controller_urlconf(controller_class, site=None):
@@ -420,7 +419,7 @@ class ActionController(object):
         Code example:
         {{{
             def _before_filter(self):
-                if self._action_name != 'login' and not self._request.user.is_authenticated():
+                if self._action_name != 'login' and not self._request.user.is_authenticated:
                     return self._redirect(action='login')
                 return None
         }}}
@@ -588,17 +587,24 @@ class ActionController(object):
     
     _render = __wrapped_render
     
-    def __wrapped_redirect(self, to_url, *args, **kwargs):
+    def __wrapped_redirect(self, to_url, **kwargs):
         if to_url is None:
-            to_url = self._helper.url_for(*args, **kwargs)
+            to_url = self._helper.url_for(**kwargs)
         return HttpResponseRedirect(to_url)
     def __wrapped_permanent_redirect(self, to_url, *args, **kwargs):
         if to_url is None:
             to_url = self._helper.url_for(*args, **kwargs)
         return HttpResponsePermanentRedirect(to_url)
     
-    def _redirect(self, to_url = None, *args, **kwargs):
-        return self.__wrap_after_filter(self.__wrapped_redirect, to_url, *args, **kwargs)
+    def _redirect(self, to_url = None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, **kwargs):
+        return self.__wrap_after_filter(self.__wrapped_redirect,
+                                        controller = controller,
+                                        action = action,
+                                        named_url  = named_url,
+                                        url_params = url_params,
+                                        url_args=url_args,
+                                        url_kwargs=url_kwargs,
+                                        to_url=to_url, **kwargs)
     _go = _redirect
     
     def _permanent_redirect(self, to_url, *args, **kwargs):

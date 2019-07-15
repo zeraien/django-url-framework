@@ -1,5 +1,11 @@
 from django.utils.http import urlencode
-from django.core.urlresolvers import reverse
+
+#django <2 compat
+try:
+    from django.urls import reverse
+except ImportError:
+    from django.core.urlresolvers import reverse
+
 from .exceptions import InvalidActionError
 from .exceptions import InvalidControllerError
 
@@ -37,7 +43,7 @@ class ApplicationHelper(object):
                     controller_name = get_controller_name(Controller, with_prefix=False)
                     named_url = '%s_%s' % (controller_name, action)
             else:
-                named_url = controller_name
+                named_url = "%s_index" % controller_name
         url = reverse(named_url, args=url_args, kwargs=url_kwargs)
         if url_params is not None:
             return '%s?%s' % (url, urlencode(url_params))
