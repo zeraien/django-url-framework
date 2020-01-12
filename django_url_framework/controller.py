@@ -113,7 +113,7 @@ def get_controller_urlconf(controller_class, site=None):
             for new_urlconf in action_func.urlconf:
                 action_urlpatterns += url_patterns(url(new_urlconf, view=wrapped_call, name=named_url))
 
-        if getattr(action_func, 'urlconf_erase', False) == False:
+        if not getattr(action_func, 'urlconf_erase', False):
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
 
             if action_name == 'index':
