@@ -56,7 +56,7 @@ def autoview_function(site, request, controller_name, controller_class, action_n
         # error_msg = _("No such controller: %(controller_name)s") % {'controller_name' : controller_name}
     except InvalidActionError as e:
         error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e.message, 'controller_name' : controller_name}
-        
+
     raise Http404(error_msg)
 
 
@@ -100,10 +100,10 @@ def get_controller_urlconf(controller_class, site=None):
             """Define custom urlconf patterns for this action."""
             for new_urlconf in action_func.urlconf:
                 action_urlpatterns += url_patterns(url(new_urlconf, view=wrapped_call, name=named_url))
-        
+
         if getattr(action_func, 'urlconf_erase', False) == False:
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
-            
+
             if action_name == 'index':
                 # No root URL is generated if we have no index action.
 
