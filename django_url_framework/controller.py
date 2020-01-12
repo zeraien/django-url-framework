@@ -61,7 +61,19 @@ def autoview_function(site, request, controller_name, controller_class, action_n
 
 
 def _get_arg_name_and_default(action_func):
-    arg_spec = inspect.getargspec(action_func)
+    """
+    This extracts the 3rd argument of the provided function and checks if it has a default value.
+    `def action(self, request, returns_this_name=?):`
+
+    :param action_func: the function to extract from
+    :return: tuple with the argument name and a boolean of whether it has a default value or not
+    """
+
+    # if the passed function was wrapped with a decorator, let's make sure to get the actual function
+    while hasattr(action_func,"__wrapped__"):
+        action_func = action_func.__wrapped__
+
+    arg_spec = inspect.getfullargspec(action_func)
     arguments = arg_spec.args
     has_default = True
     if len(arguments) == 3:
