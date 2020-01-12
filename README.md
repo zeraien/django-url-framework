@@ -127,14 +127,14 @@ class Controller(ActionController):
 By default templates are stored in the subdirectory with the controller's name, and the templates are given the same filename as the action name.
 If a request is determinned to be AJAX in nature, the template filename is prefixed with an underscore.
 Example:
-````python
+```python
 class FooController(ActionController):
     def foo_action(self, request):
       return {}
 ```
 
 File structure:
-```
+```python
 /foo/foo_action.html
 /foo/_foo_action.html <--- for AJAX requests.
 ```
@@ -142,13 +142,13 @@ File structure:
 You can disable this prefixing on a per action or per controller level.
 
 For all actions in a controller:
-````python
+```python
 class FooController(ActionController):
     no_ajax_prefix = True
 ```
 
 For a single action:
-````python
+```python
 from django_url_framework.decorators.action_options
 class FooController(ActionController):
     @no_ajax_prefix
@@ -159,7 +159,7 @@ class FooController(ActionController):
 
 ## Action names
 
-````python
+```python
 class FooController(ActionController):
     def action(self, request):
       return {}
@@ -171,7 +171,7 @@ Creates the following URL:
 
 Double underscores `__` in action names are converted to slashes in the urlconf, so: `action__name` becomes `/action/name/`.
 
-````python
+```python
 class Controller(ActionController):
     def action__foo(self, request):
       return {}
@@ -201,7 +201,7 @@ The action will now have the template `/controller/foo.html`. Prefixes do not af
 ## Action parameters
 
 Providing a third parameter to an action will create a URLconf for that parameter, like so:
-````python
+```python
 def action(self, request, object_id):
     return {}
 ```
