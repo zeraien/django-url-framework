@@ -346,12 +346,15 @@ class ActionController(object):
             self._no_ajax_prefix = self._no_ajax_prefix or getattr(action_func, 'no_ajax_prefix', False)
 
         self._action_name_sans_prefix = self._get_action_name(action_func, with_prefix=False)
-        
-        if hasattr(action_func,'allowed_methods'):
-            if type(action_func.allowed_methods) not in (list, tuple):
-                allowed_methods = [action_func.allowed_methods.upper()]
+
+        allowed_methods = getattr(action_func, "allowed_methods",
+                                  getattr(self._before_filter, "allowed_methods", None)
+                                  )
+        if allowed_methods:
+            if type(allowed_methods) not in (list, tuple):
+                allowed_methods = [allowed_methods.upper()]
             else:
-                allowed_methods = [i.upper() for i in action_func.allowed_methods]
+                allowed_methods = [i.upper() for i in allowed_methods]
             if self._request.method.upper() not in allowed_methods:
                 return HttpResponseNotAllowed(allowed_methods)
                 
