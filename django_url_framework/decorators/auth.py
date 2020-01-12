@@ -5,7 +5,6 @@ except ImportError:
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.http import HttpResponseRedirect, HttpResponseForbidden
-from django.utils.decorators import available_attrs
 from django.utils.http import urlquote
 
 def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIELD_NAME):
@@ -19,6 +18,7 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
         login_url = settings.LOGIN_URL
 
     def decorator(view_func):
+        @wraps(view_func)
         def _wrapped_view(self, request, *args, **kwargs):
             if test_func(request.user):
                 return view_func(self, request, *args, **kwargs)
@@ -28,7 +28,7 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
                 return HttpResponseForbidden()
             else:
                 return HttpResponseRedirect('%s?%s=%s' % tup)
-        return wraps(view_func, assigned=available_attrs(view_func))(_wrapped_view)
+        return _wrapped_view
     return decorator
 
 def must_be_member_of_group(group_name=None, redirect_field_name=REDIRECT_FIELD_NAME, login_url=None):
