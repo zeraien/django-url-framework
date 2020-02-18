@@ -55,7 +55,7 @@ def autoview_function(site, request, controller_name, controller_class, action_n
     # except InvalidControllerError, e:
         # error_msg = _("No such controller: %(controller_name)s") % {'controller_name' : controller_name}
     except InvalidActionError as e:
-        error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e.message, 'controller_name' : controller_name}
+        error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e, 'controller_name' : controller_name}
 
     raise Http404(error_msg)
 
