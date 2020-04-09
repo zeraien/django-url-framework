@@ -1,17 +1,22 @@
 import inspect
 from functools import wraps
+from json.encoder import JSONEncoder
+from typing import Union, Tuple, Any
+
 from django.http import *
 import re
 import sys
 
 import warnings
+
+from .renderers import JSONRenderer, YAMLRenderer, TextRenderer, TemplateRenderer, Renderer
 from .helper import ApplicationHelper
-from django.utils.translation import ugettext as _
 from django.conf.urls import url, include
 from django import VERSION
 if VERSION[:2]<(1,9):
     from django.conf.urls import patterns
 
+from .exceptions import MethodNotAllowed
 from .exceptions import InvalidActionError
 from .exceptions import InvalidControllerError
 
@@ -47,7 +52,7 @@ def autoview_function(site, request, controller_name, controller_class, action_n
                 for kwarg in controller_class.consume_urlconf_keyword_arguments:
                     if kwarg in kwargs:
                         del(kwargs[kwarg])
-            return controller_class(site, request, helper, url_params=kwargs_all)._call_action(action_name, *args, **kwargs)
+            return controller_class(site=site, request=request, helper=helper, url_params=kwargs_all)._call_action(action_name, *args, **kwargs)
         else:
             raise InvalidActionError(action_name)
         # else:
@@ -55,7 +60,7 @@ def autoview_function(site, request, controller_name, controller_class, action_n
     # except InvalidControllerError, e:
         # error_msg = _("No such controller: %(controller_name)s") % {'controller_name' : controller_name}
     except InvalidActionError as e:
-        error_msg = _("Action '%(action_name)s' not found in controller '%(controller_name)s'") % {'action_name' : e, 'controller_name' : controller_name}
+        error_msg = "Action '%(action_name)s' not found in controller '%(controller_name)s'" % {'action_name' : e, 'controller_name' : controller_name}
 
     raise Http404(error_msg)
 
@@ -206,6 +211,8 @@ def get_action_wrapper(site, controller_class, action_name):
     else:
         raise InvalidActionError(action_name)
 
+default_charset = 'utf8'
+
 class ActionController(object):
     """
     Any function that does not start with a _ will be considered an action.
@@ -252,7 +259,10 @@ class ActionController(object):
                 If this is False, the template file will be prefixed with _ (underscore) for all ajax requests.
                 
                 Default: False
-            
+
+        json_default_encoder
+                Allows you to specify a custom JSON encoder class for all json encoding
+
     Actions can be decorated with a number of features and settings, such as different names, urls and http method access rules.
     See the `django_url_framework.decorators` package.
     
@@ -267,9 +277,12 @@ class ActionController(object):
     controller_name = None
     consume_urlconf_keyword_arguments = None
     urlconf_prefix = None
+    json_default_encoder = None
+    yaml_default_flow_style = True
 
     def __init__(self, site, request, helper_class, url_params):
         self._site = site
+        if helper_class is None: helper_class = ApplicationHelper
         self._helper = helper_class(self)
         self._request = request
         self._response = HttpResponse()
@@ -314,6 +327,19 @@ class ActionController(object):
     _params = property(_get_params)
 
     def _call_action(self, action_name, *args, **kwargs):
+        """
+        The flow of calls:
+        * _call_action
+            * _view_wrapper
+                * __wrap_before_filter + __wrap_after_filter
+                * __wrap_after_filter
+
+
+        :param action_name:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         if action_name in self._actions:
             action_func = self._actions[action_name]
             action_func = getattr(self, action_func.__name__)
@@ -335,7 +361,99 @@ class ActionController(object):
             return func_name
         raise InvalidActionError(action_func.__name__)
 
-    def _view_wrapper(self, action_func, *args, **kwargs):
+    def _get_renderer_for_request(self, data, **kwargs):
+        accept_types = self._request.headers.get("Accept")
+        content_type = None
+        if isinstance(accept_types, (list,tuple)):
+            if len(accept_types)>0:
+                content_type = accept_types[0]
+        else:
+            split_types = list(map(lambda x:x.strip(), accept_types.split(",")))
+            if len(split_types)>0:
+                content_type = split_types[0]
+
+        _renderers_for_contenttypes = {
+            'text/html': TemplateRenderer,
+            'text/plain': TextRenderer,
+            "application/json":JSONRenderer,
+            "application/yaml":YAMLRenderer
+        }
+
+        renderer_klass = _renderers_for_contenttypes.get(content_type)
+
+        if not renderer_klass:
+            renderer_klass = TextRenderer
+
+        return self._instantiate_renderer(
+            renderer_klass=renderer_klass,
+            data=data,
+            **kwargs)
+
+    def _get_renderer_for_datatype(self, data, **kwargs):
+
+        _renderers_for_contenttypes = {
+            dict: TemplateRenderer,
+            str: TextRenderer,
+            int: JSONRenderer,
+            bool: JSONRenderer,
+        }
+        renderer_klass = _renderers_for_contenttypes.get(type(data))
+        if not renderer_klass:
+            renderer_klass = TextRenderer
+
+        return self._instantiate_renderer(
+            renderer_klass=renderer_klass,
+            data=data,
+            **kwargs)
+
+    def _instantiate_renderer(self, renderer_klass, data, **kwargs):
+
+        _default_params = {
+            YAMLRenderer: {'default_flow_style': self.yaml_default_flow_style},
+            JSONRenderer: {'json_default_encoder':self.json_default_encoder},
+        }
+        if renderer_klass in _default_params:
+            kwargs.update(_default_params[renderer_klass])
+        return renderer_klass(data=data, **kwargs)
+
+
+    def _check_http_method_access(self, action_func):
+        """
+        return a list of allowed http methods, if the request.method is not one of them.
+        If we're allowed, return None.[
+        :param action_func:
+        :return:
+        """
+        allowed_methods = getattr(action_func, "allowed_methods",
+                                  getattr(self._before_filter, "allowed_methods", None)
+                                  )
+        if allowed_methods:
+            if type(allowed_methods) not in (list, tuple):
+                allowed_methods = [allowed_methods.upper()]
+            else:
+                allowed_methods = [i.upper() for i in allowed_methods]
+            if self._request.method.upper() not in allowed_methods:
+                raise MethodNotAllowed(', '.join(allowed_methods))
+        return True
+
+    def _view_wrapper(self, action_func, *args, **kwargs) -> HttpResponse:
+        """
+        wrap the view function, here we call
+        * _before_filter
+        If before filter returns a response object, the game is over and we return the response object without
+        calling the action itself.
+        If `_before_filter` returns some other data, it is passed to `__wrap_after_filter` which is then returned.
+        Depending on the response from `_before_filter`, different rendering methods will be used.
+        If `_before_filter` returns a string and call `__wrapped_print`, we will go to print, if `_before_filter` returns a dict, we will
+        process it as context data and call `__wrapped_render`.
+
+        If there is an error in `_before_filter`, we call `_on_exception` and then proceed to render the data returned from
+        that, using the paradigm above - meaning text calls `__wrapped_print` and dict calls `__wrapped_render`.
+        The `_after_filter` is skipped if `_on_exception` is called.
+
+        :param action_func: The action function in question
+        :return: an HttpResponse object
+        """
         self._action_name = self._get_action_name(action_func)
         self._action_func = action_func
 
@@ -347,90 +465,127 @@ class ActionController(object):
 
         self._action_name_sans_prefix = self._get_action_name(action_func, with_prefix=False)
 
-        allowed_methods = getattr(action_func, "allowed_methods",
-                                  getattr(self._before_filter, "allowed_methods", None)
-                                  )
-        if allowed_methods:
-            if type(allowed_methods) not in (list, tuple):
-                allowed_methods = [allowed_methods.upper()]
-            else:
-                allowed_methods = [i.upper() for i in allowed_methods]
-            if self._request.method.upper() not in allowed_methods:
-                return HttpResponseNotAllowed(allowed_methods)
-                
+        try:
+            self._check_http_method_access(action_func)
+        except MethodNotAllowed as e:
+            return HttpResponseNotAllowed(str(e))
+
         send_args = {}
         if hasattr(action_func,'mimetype'):
             send_args['mimetype'] = action_func.mimetype
+        if hasattr(action_func,'charset'):
+            send_args['charset'] = action_func.charset
 
         try:
-            response = self.__wrap_before_filter(action_func, *args, **kwargs)
+            # run before filter
+            before_filter_response = self.__run_before_filter(action_func=action_func)
+            if issubclass(before_filter_response.__class__, HttpResponse):
+                return before_filter_response
 
-            if isinstance(response, dict):
-                return self.__wrap_after_filter(self.__wrapped_render, response, **send_args)
-            elif isinstance(response, str):
-                return self.__wrap_after_filter(self.__wrapped_print, response, **send_args)
-            else:
-                return response
+            # run the actual action
+            renderer, status_code = self.__run_action(action_func=action_func, renderer_args=send_args, *args, **kwargs)
+            if issubclass(renderer.__class__, HttpResponse):
+                return renderer
+
+            after_filter_response = self.__run_after_filter(renderer=renderer, action_func=action_func)
+            if issubclass(after_filter_response.__class__,HttpResponse):
+                return after_filter_response
+
+            self._response.status_code = status_code
 
         except Exception as exception:
             response = self._on_exception(request=self._request, exception=exception)
-            
+
             if response is None:
                 raise exception.with_traceback(sys.exc_info()[-1])
             else:
                 if isinstance(response, dict):
-                    return self.__wrapped_render(dictionary=response, template_name=self._get_error_template_path())
+                    renderer = TemplateRenderer(data=response, template_name=self._get_error_template_path(), **send_args)
                 elif isinstance(response, str):
-                    return self.__wrapped_print(text=response, **send_args)
+                    renderer = TextRenderer(data=response, **send_args)
                 else:
                     return response
 
+                self._response.status_code = 500
 
-    def __wrap_before_filter(self, wrapped_func, *args, **kwargs):
-        if getattr(self, '_before_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
+        rendered_response = renderer.render(self)
+        self._set_mimetype(mimetype=renderer.mimetype, charset=renderer.charset)
+        self._response.content = rendered_response
+        return self._response
+
+    def __run_action(self, action_func, renderer_args, *args, **kwargs) -> Union[Tuple[Renderer,int], HttpResponse]:
+        """
+
+        :param action_func:
+        :param args:
+        :param kwargs:
+        :return: a tuple with the action response and an http status code
+        """
+        if hasattr(self, 'do_not_pass_request'):
+            action_response = action_func(*args, **kwargs)
+        else:
+            action_response = action_func(self._request, *args, **kwargs)
+
+        if issubclass(action_response.__class__, HttpResponse):
+            return action_response
+        #######################################################
+
+        # check if action returns tuple, second part of tuple is the status code, if not 200
+        status_code = 200
+        if isinstance(action_response, tuple) and len(action_response)==2 and isinstance(action_response[1],int):
+            action_response, status_code = action_response
+
+        if issubclass(action_response.__class__, Renderer):
+            renderer = action_response
+        else:
+            renderer = self._get_renderer_for_request(data=self._template_context, **renderer_args)
+            renderer.update(action_response)
+
+        return renderer, status_code
+
+    def __run_before_filter(self, action_func) -> Union[HttpRequest,None]:
+        """
+        This calls `_before_filter` and updates the `template_context`.
+        If the response from `_before_filter` is an `HttpResponse`, we return this
+        without calling the action function.
+        Anything returned from `_before_filter` that is not a `dict` or  subclass of `HttpResponse`, will be ignored.
+        
+        If the request contains `Accept: application/json`, the data returned from the action will be rendered as json.
+        
+        :param action_func:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if getattr(self, '_before_filter_runonce', False) == False and getattr(action_func,'disable_filters', False) == False:
             self._before_filter_runonce = True
 
-            if self._before_filter.__code__.co_argcount >= 2:
-                filter_response = self._before_filter(self._request)
-            else:
-                warnings.warn("_after_filter and _before_filter should always take `request` as second argument. This will be removed after august 2020",
-                              DeprecationWarning)
-                filter_response = self._before_filter()
+            filter_response = self._before_filter(self._request)
             
-            if isinstance(filter_response, dict):
+            if issubclass(filter_response.__class__, dict):
                 self._template_context.update(filter_response)
-            elif filter_response is not None:
+            elif issubclass(filter_response.__class__,HttpResponse):
                 return filter_response
-        
-        if hasattr(self, 'do_not_pass_request'):
-            action_response = wrapped_func(*args, **kwargs)
-        else:
-            action_response = wrapped_func(self._request, *args, **kwargs)
-        if isinstance(action_response, dict):
-            self._template_context.update(action_response)
-            return self._template_context
 
-        return action_response
-        
-    def __wrap_after_filter(self, wrapped_func, *args, **kwargs):
-        if getattr(self, '_after_filter_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
+        return None
+
+    def __run_after_filter(self, action_func, renderer:Renderer)-> Union[HttpResponse, None]:
+        if not getattr(self, '_after_filter_runonce', False) and not getattr(action_func,'disable_filters', False):
             self._after_filter_runonce = True
-            if self._after_filter.__code__.co_argcount >= 2:
-                filter_response = self._after_filter(request=self._request)
-            else:
-                warnings.warn("_after_filter and _before_filter should always take `request` as second argument. This will be removed after august 2020",
-                              DeprecationWarning)
-                filter_response = self._after_filter()
-                
-            if isinstance(filter_response, dict):
-                self._template_context.update(filter_response)
-            elif filter_response is not None:
+            filter_response = self._after_filter(request=self._request)
+
+            if issubclass(filter_response.__class__,HttpResponse):
                 return filter_response
-                
-        return wrapped_func(*args, **kwargs)
+            elif filter_response is not None:
+                try:
+                    renderer.update(filter_response)
+                except Exception as e:
+                    raise ValueError("_after_filter tried to update existing data, but there was an error: %s." % e)
+
+        return None
 
             
-    def _before_filter(self, request):
+    def _before_filter(self, request) -> Union[None,dict,HttpResponse]:
         """If overridden, runs before every action.
         
         Code example:
@@ -447,7 +602,7 @@ class ActionController(object):
         return None
     def _before_render(self, request = None):
         return None
-    def _on_exception(self, request, exception):
+    def _on_exception(self, request, exception) -> Union[None,dict,HttpResponse]:
         """Can be overriden to handle uncaught exceptions.
         
         If you set the use_action_specific_template attribute on this function,
@@ -464,48 +619,54 @@ class ActionController(object):
     def _delete_cookie(self, *args, **kwargs):
         self._response.delete_cookie(*args, **kwargs)
     
-    def _set_mimetype(self, mimetype, charset = None):
+    def _set_mimetype(self, mimetype, charset = 'utf8'):
         if mimetype is not None:
             if charset is None:
                 charset = self._response.charset
             self._response['Content-Type'] = "%s; charset=%s" % (mimetype, charset)
-    
-    def _as_json(self, data, status_code = 200, default=None, *args, **kwargs):
+
+    def _as_auto_response(self, data):
+        """determine the renderer from the requests' Accept: header"""
+        return self._get_renderer_for_request(data)
+
+    def _as_json(self, data, status_code = 200, charset=default_charset, json_encoder=json_default_encoder, default=None, **kwargs):
         """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
+        if default:
+            class CustomJSONEncoder(JSONEncoder):
+                pass
+            CustomJSONEncoder.default = default
+            json_encoder = CustomJSONEncoder
+        return JSONRenderer(data, json_default_encoder=json_encoder, charset=charset), status_code
+
+    def _as_yaml(self, data, default_flow_style=yaml_default_flow_style, status_code = 200, **kwargs):
+        """Render the returned dictionary as a YAML object."""
+        return YAMLRenderer(data=data, default_flow_style=default_flow_style, charset=kwargs.pop('charset', default_charset)), status_code
+
+
+    def __wrapped_json(self, data, mimetype= "application/json", charset=default_charset):
+        self._before_render(request=self._request)
+        self._set_mimetype(mimetype=mimetype, charset=charset)
+
         try:
             import simplejson as json
         except ImportError:
             import json
 
-        if 'mimetype' not in kwargs:
-            kwargs['mimetype'] = 'application/json'
         self._template_context = data
-        response = self.__wrap_after_filter(json.dumps, self._template_context, default=default)
-        if isinstance(response, str):
-            return self.__wrapped_print(response, status_code=status_code, *args, **kwargs)
-        else:
-            return response
+        self._response.content = json.dumps(self._template_context, default=self._json_default)
+        return self._response
 
-    def _as_yaml(self, data, default_flow_style = True, status_code = 200, *args, **kwargs):
-        """Render the returned dictionary as a YAML object."""
-        import yaml
-        if 'mimetype' not in kwargs:
-            kwargs['mimetype'] = 'application/yaml'
-        return self._print(yaml.dump(data, default_flow_style=default_flow_style), status_code=status_code, *args, **kwargs)
-        
-    def __wrapped_print(self, text, mimetype = 'text/plain', charset=None, status_code=200):
+    def __wrapped_print(self, text, mimetype = 'text/plain', charset=default_charset, status_code=200):
         """Print the returned string as plain text."""
-        self._before_render()
-        self._set_mimetype(mimetype, charset)
+        self._before_render(request=self._request)
+        self._set_mimetype(mimetype=mimetype, charset=charset)
 
-        if self._response.status_code == 200:
-            self._response.status_code = status_code
-            
         self._response.content = text
         return self._response        
 
-    def _print(self, text, mimetype = 'text/plain', charset=None, **kwargs):
-        return self.__wrap_after_filter(self.__wrapped_print, text=text, mimetype=mimetype, charset=charset, **kwargs)
+    def _print(self, text, mimetype = 'text/plain', charset=default_charset, **kwargs):
+        return TextRenderer(data=text, mimetype=mimetype, charset=charset)
+        # return self.__wrap_after_filter(self.__wrapped_print, text=text, mimetype=mimetype, charset=charset, **kwargs)
 
     def _get_flash(self):
         if self._flash_cache is None:
@@ -546,47 +707,19 @@ class ActionController(object):
         return template_name
         
     
-    def __wrapped_render(self, dictionary = {}, *args, **kwargs):
-        """Render the provided dictionary using the default template for the given action.
-            The keyword argument 'mimetype' may be used to alter the response type.
+    def __wrapped_render(self, dictionary=None, *args, **kwargs):
         """
-        from django.template import loader
-        from django.template.context import RequestContext
-        
-        dictionary.update({
-            'request':self._request,
-            'controller_name':self._controller_name,
-            'controller_actions':list(self._actions.keys()),
-            'action_name':self._action_name,
-            'controller_helper':self._helper,
-            'flash': self._flash,
-        })
-        
-        mimetype = kwargs.pop('mimetype', None)
-        if mimetype:
-            self._response['content-type'] = ('Content-Type', mimetype)
+            Render the provided dictionary using the default template for the given action.
+            The keyword argument 'mimetype' may be used to alter the response type.
 
-        if 'template_name' not in kwargs:
-            template_replacement_data = {'controller':self._template_prefix,
-                                         'action':self._action_name,
-                                         'ext':self._template_extension}
-
-            if self._is_ajax and self._no_ajax_prefix==False:
-                if hasattr(self._action_func, 'ajax_template_name'):
-                    template_name = self._action_func.ajax_template_name
-                else:
-                    template_name = self._ajax_template_string % template_replacement_data
-            elif hasattr(self._action_func,'template_name'):
-                template_name = self._action_func.template_name
-            else:
-                template_name = self._template_string % template_replacement_data
-            kwargs['template_name'] = template_name
-
+            The template context will be populated with the following data:
+            request, controller_name, controller_actions (all actions), action_name (current_action), controller_helper, flash (flash messages)
+        """
         self._template_context.update(dictionary)
 
         if getattr(self, '_before_render_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
             self._before_render_runonce = True
-            before_render_response = self._before_render()
+            before_render_response = self._before_render(request=self._request)
             if isinstance(before_render_response, dict):
                 self._template_context.update(before_render_response)
             elif before_render_response is not None:
@@ -597,10 +730,7 @@ class ActionController(object):
         # if obj is not None:
         #     populate_xheaders(self._request, self._response, obj.__class__, obj.pk)
 
-        self._response.content = loader.render_to_string(template_name=kwargs['template_name'],
-                                                         context=self._template_context,
-                                                         request=self._request)
-        return self._response
+        return TemplateRenderer(data=dictionary, **kwargs)
     
     _render = __wrapped_render
     
@@ -614,15 +744,15 @@ class ActionController(object):
         return HttpResponsePermanentRedirect(to_url)
     
     def _redirect(self, to_url = None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, **kwargs):
-        return self.__wrap_after_filter(self.__wrapped_redirect,
-                                        controller = controller,
-                                        action = action,
-                                        named_url  = named_url,
-                                        url_params = url_params,
-                                        url_args=url_args,
-                                        url_kwargs=url_kwargs,
-                                        to_url=to_url, **kwargs)
+        return self.__run_after_filter(self.__wrapped_redirect,
+                                       controller = controller,
+                                       action = action,
+                                       named_url  = named_url,
+                                       url_params = url_params,
+                                       url_args=url_args,
+                                       url_kwargs=url_kwargs,
+                                       to_url=to_url, **kwargs)
     _go = _redirect
     
     def _permanent_redirect(self, to_url, *args, **kwargs):
-        return self.__wrap_after_filter(self.__wrapped_permanent_redirect, to_url, *args, **kwargs)
+        return self.__run_after_filter(self.__wrapped_permanent_redirect, to_url, *args, **kwargs)
