@@ -3,10 +3,11 @@ from __future__ import annotations
 import pprint
 from abc import ABC, abstractmethod
 
+from django.http import HttpResponseRedirect, HttpResponsePermanentRedirect
 
 default_charset = "utf8"
 class Renderer(ABC):
-    def __init__(self, data, mimetype, charset=default_charset, **kwargs):
+    def __init__(self, data, mimetype=None, charset=default_charset, **kwargs):
         self._data = data
         self.mimetype=mimetype
         self.charset=charset
@@ -99,3 +100,16 @@ class JSONRenderer(Renderer):
             import json
 
         return json.dumps(self._data, cls=self._json_default_encoder)
+
+class RedirectRenderer(Renderer):
+    def __init__(self, to_url, permanent=False, **kwargs):
+        self.permanent=permanent
+        self.to_url = to_url
+        super(RedirectRenderer, self).__init__(data=None,**kwargs)
+
+    def render(self, controller):
+        if self.permanent:
+            return HttpResponsePermanentRedirect(self.to_url)
+        else:
+            return HttpResponseRedirect(self.to_url)
+
