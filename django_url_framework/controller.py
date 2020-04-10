@@ -635,9 +635,9 @@ class ActionController(object):
                 charset = self._response.charset
             self._response['Content-Type'] = "%s; charset=%s" % (mimetype, charset)
 
-    def _as_auto_response(self, data):
+    def _as_auto_response(self, data, **kwargs):
         """determine the renderer from the requests' Accept: header"""
-        return self._get_renderer_for_request(data)
+        return self._get_renderer_for_request(data, **kwargs)
 
     def _as_json(self, data, status_code = 200, charset=default_charset, json_encoder=json_default_encoder, default=None, **kwargs):
         """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
