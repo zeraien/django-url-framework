@@ -9,7 +9,7 @@ import sys
 
 import warnings
 
-from .renderers import JSONRenderer, YAMLRenderer, TextRenderer, TemplateRenderer, Renderer
+from .renderers import JSONRenderer, YAMLRenderer, TextRenderer, TemplateRenderer, Renderer, RedirectRenderer
 from .helper import ApplicationHelper
 from django.conf.urls import url, include
 from django import VERSION
@@ -733,26 +733,33 @@ class ActionController(object):
         return TemplateRenderer(data=dictionary, **kwargs)
     
     _render = __wrapped_render
-    
-    def __wrapped_redirect(self, to_url, **kwargs):
+
+    def _redirect(self, to_url = None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, permanent=False, **kwargs):
+        """
+        :param to_url: a URL to redirect to, other arguments will not be used if this is specified
+        :param controller: a controller class or name, if not this one
+        :param action: an action name - if a controller is not specified, the action will be in the current controller
+        :param named_url: A named URL in django
+        :param url_params: The query string params
+        :param url_args: the list arguments for this URL, this will be used to build the URL within django's urlresolvers
+        :param url_kwargs: the dict arguments for this URL, this will be used to build the URL within django's urlresolvers
+        :param permanent: is this a permanent redirect? (301=permanent, 302=temporary)
+        :param kwargs:
+        :return: the HttpResponse with a redirecting content
+        """
         if to_url is None:
-            to_url = self._helper.url_for(**kwargs)
-        return HttpResponseRedirect(to_url)
-    def __wrapped_permanent_redirect(self, to_url, *args, **kwargs):
-        if to_url is None:
-            to_url = self._helper.url_for(*args, **kwargs)
-        return HttpResponsePermanentRedirect(to_url)
-    
-    def _redirect(self, to_url = None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, **kwargs):
-        return self.__run_after_filter(self.__wrapped_redirect,
-                                       controller = controller,
-                                       action = action,
-                                       named_url  = named_url,
-                                       url_params = url_params,
-                                       url_args=url_args,
-                                       url_kwargs=url_kwargs,
-                                       to_url=to_url, **kwargs)
+            to_url = self._helper.url_for(
+                controller=controller, action=action,
+                named_url=named_url,
+                url_params=url_params,
+                url_args=url_args,
+                url_kwargs=url_kwargs
+            )
+        return RedirectRenderer(to_url=to_url, permanent=permanent)
     _go = _redirect
     
-    def _permanent_redirect(self, to_url, *args, **kwargs):
-        return self.__run_after_filter(self.__wrapped_permanent_redirect, to_url, *args, **kwargs)
+    def _permanent_redirect(self, to_url=None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, permanent=False):
+        """
+        see `_redirect`
+        """
+        return self._go(permanent=True, **vars())
