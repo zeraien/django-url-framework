@@ -16,17 +16,21 @@ from .controller import get_controller_urlconf
 
 from django.conf.urls import include, url
 
-
 class Site(object):
     def __init__(self):
         self.controllers = {}
         self.helpers = {}
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("django_url_framework")
+        self._use_inflection_lib = False
 
-    def autodiscover(self, include_apps = [], exclude_apps = []):
+    def autodiscover(self, include_apps = [], exclude_apps = [], new_inflection_library=False):
         """Autodiscover all urls within all applications that regex match any entry in 'include_apps'
         and exclude any in 'exclude_apps'.
+        :param exclude_apps: A list of django apps not to include in auto generation
+        :param include_apps: A list of apps to include in auto generation - use this will no longer auto detect apps
+        :param new_inflection_library: Use `inflection` library to generate URLs from Controller class names (recommended!). Will be the default in 2020.
         """
+        self._use_inflection_lib = new_inflection_library
         
         if type(include_apps) not in (list, tuple):
             include_apps = (include_apps,)
@@ -60,7 +64,7 @@ class Site(object):
                 app_path = app_config.path
                 for f in self._yield_controller_files(app_path):
                     available_controllers.append(f)
-                self.load_controllers(app_path=app_path,
+                self._load_controllers(app_path=app_path,
                                       app_module_path=app_name,
                                       controllers=available_controllers,
                                       )
@@ -125,7 +129,7 @@ class Site(object):
             if found_helper:
                 found_helper[0].close()
 
-    def load_controllers(self, app_path, app_module_path, controllers):
+    def _load_controllers(self, app_path, app_module_path, controllers):
         found_controller, found_helper = (None, None)
         
         for controller_file in controllers:
@@ -136,6 +140,10 @@ class Site(object):
                                                                      controller_file=controller_file):
                     controller_name = get_controller_name(controller_class)
                     self.controllers[controller_name] = controller_class
+
+                    if controller_class.use_inflection_library is None:
+                       controller_class.use_inflection_library = self._use_inflection_lib
+
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self.logger.debug("[LOADED] %s as %s" % (controller_class.__name__, controller_name))
 
