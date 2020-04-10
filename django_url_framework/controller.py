@@ -372,13 +372,14 @@ class ActionController(object):
     def _get_renderer_for_request(self, data, **kwargs):
         accept_types = self._request.headers.get("Accept")
         content_type = None
-        if isinstance(accept_types, (list,tuple)):
-            if len(accept_types)>0:
-                content_type = accept_types[0]
-        else:
-            split_types = list(map(lambda x:x.strip(), accept_types.split(",")))
-            if len(split_types)>0:
-                content_type = split_types[0]
+        if accept_types:
+            if isinstance(accept_types, (list,tuple)):
+                if len(accept_types)>0:
+                    content_type = accept_types[0]
+            else:
+                split_types = list(map(lambda x:x.strip(), accept_types.split(",")))
+                if len(split_types)>0:
+                    content_type = split_types[0]
 
         _renderers_for_contenttypes = {
             'text/html': TemplateRenderer,
