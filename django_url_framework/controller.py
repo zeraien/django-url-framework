@@ -1,4 +1,5 @@
 import inspect
+import inflection
 from functools import wraps
 from json.encoder import JSONEncoder
 from typing import Union, Tuple, Any
@@ -20,18 +21,25 @@ from .exceptions import MethodNotAllowed
 from .exceptions import InvalidActionError
 from .exceptions import InvalidControllerError
 
-def get_controller_name(controller_class, with_prefix = True):
+def get_controller_name(controller_class:'ActionController.__class__', with_prefix:bool = True) -> str:
+    if isinstance(controller_class, ActionController):
+        controller_class = controller_class.__class__
+
     controller_name = getattr(controller_class, 'controller_name', None)
+    use_inflection_lib = getattr(controller_class,"use_inflection_library",False) #todo defaults to True in 2021
     if controller_name is None:
-        name_ = [controller_class.__name__[0]]
-        prev = ''
-        for l in re.sub(r"Controller$",'',controller_class.__name__[1:]):
-            if l.isupper() and prev.islower():
-                name_.append('_'+l)
-            else:
-                name_.append(l)
-            prev = l
-        controller_name = ''.join(name_).lower()
+        if use_inflection_lib:
+            controller_name = re.sub(r"_controller$", "", inflection.underscore(controller_class.__name__))
+        else:
+            name_ = [controller_class.__name__[0]]
+            prev = ''
+            for l in re.sub(r"Controller$",'',controller_class.__name__[1:]):
+                if l.isupper() and prev.islower():
+                    name_.append('_'+l)
+                else:
+                    name_.append(l)
+                prev = l
+            controller_name = ''.join(name_).lower()
 
     controller_prefix = getattr(controller_class, 'controller_prefix', None)
     if with_prefix and controller_prefix not in (None, ''):
