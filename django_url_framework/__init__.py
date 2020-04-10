@@ -1,4 +1,4 @@
-VERSION = (0, 4, 4)
+VERSION = (0, 5, 0)
 default_app_config = 'django_url_framework.apps.URLFrameworkAppConfig'
 
 
