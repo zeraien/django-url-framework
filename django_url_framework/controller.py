@@ -46,7 +46,7 @@ def get_controller_name(controller_class:'ActionController.__class__', with_pref
         controller_name = controller_class.controller_prefix + controller_name
     return controller_name
 
-def autoview_function(site, request, controller_name, controller_class, action_name = 'index', *args, **kwargs):
+def autoview_function(site:'django_url_framework.site.Site', request, controller_name:str, controller_class:'ActionController.__class__', action_name:str = 'index', *args, **kwargs) -> HttpResponse:
     error_msg = None
     try:
         # if controller_name in self.controllers:
@@ -100,7 +100,7 @@ def url_patterns(*args):
     else:
         return patterns('', *args)
 
-def get_controller_urlconf(controller_class, site=None):
+def get_controller_urlconf(controller_class:'ActionController.__class__', site=None):
     controller_name = get_controller_name(controller_class)
     actions = get_actions(controller_class)
     urlpatterns = url_patterns()
@@ -277,16 +277,17 @@ class ActionController(object):
     The prefixes will not be taken into account when determining template filenames.
     
     """
-    template_extension = "html"
+    template_extension:str = "html"
     template_prefix = None
     no_subdirectories = False
     no_ajax_prefix = False
     controller_prefix = None
     controller_name = None
-    consume_urlconf_keyword_arguments = None
-    urlconf_prefix = None
-    json_default_encoder = None
-    yaml_default_flow_style = True
+    consume_urlconf_keyword_arguments:Iterable[str] = None
+    urlconf_prefix:list = None
+    json_default_encoder:JSONEncoder = None
+    yaml_default_flow_style:bool = True
+    use_inflection_library:Union[bool,None] = None
 
     def __init__(self, site, request, helper_class, url_params):
         self._site = site
