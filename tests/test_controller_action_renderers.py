@@ -72,6 +72,53 @@ class TestController(unittest.TestCase):
 
         _run_test(json.dumps(expected))
 
+    def test_before_filter(self):
+        returned = {"foo":"bar"}
+
+        def _run_test(expect, **kwargs):
+            class TestPrintController(ActionController):
+                def _before_filter(self, request):
+                    return {"add":123}
+                @json_action()
+                def test_action(self, request):
+                    return returned
+            self._request_and_test(TestPrintController, "test_action", expected_response=expect)
+
+        _run_test(json.dumps({"foo":"bar", "add":123}))
+
+    def test_print(self):
+        expected = [1,2,3,4,5]
+
+        def _run_test(expect, **kwargs):
+            class TestPrintController(ActionController):
+                def test_action(self, request):
+                    return self._print(expected)
+            self._request_and_test(TestPrintController, "test_action", expected_response=expect)
+
+        _run_test(str(expected))
+
+    def test_as_yaml(self):
+        expected = {'ab':"C",1:"2",None:False}
+
+        def _run_test(expect, **kwargs):
+            class TestAsYamlController(ActionController):
+                def test_action(self, request):
+                    return self._as_yaml(expected, default_flow_style=True)
+            self._request_and_test(TestAsYamlController, "test_action", expected_response=expect)
+
+        _run_test(yaml.dump(expected, default_flow_style=True))
+
+    def test_as_json(self):
+        expected = {'ab':"C",1:"2",None:False}
+
+        def _run_test(expect, **kwargs):
+            class TestAsJsonController(ActionController):
+                def test_action(self, request):
+                    return self._as_json(expected)
+            self._request_and_test(TestAsJsonController, "test_action", expected_response=expect)
+
+        _run_test(json.dumps(expected))
+
     def test_redirect_action(self):
 
         class RedirectController(ActionController):
