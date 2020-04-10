@@ -21,7 +21,7 @@ class TestController(unittest.TestCase):
             response = ControllerKlass(site=None, request=request, helper_class=None, url_params=None)._call_action(action_name)
             self.assertEquals(response.status_code, 200)
             self.assertEquals(response.content.decode('utf8').strip(), expected_response.strip())
-
+            return response
 
     def test_auto_json_yaml_str(self):
         expected = {'ab':"C",1:"2",None:False}
@@ -30,7 +30,7 @@ class TestController(unittest.TestCase):
         def _run_test(accept, expect, **kwargs):
             class TestTestController(ActionController):
                 yaml_default_flow_style=yaml_flow
-                @auto
+                @auto()
                 def test_action(self, request):
                     return expected
             self._request_and_test(TestTestController, "test_action", expected_response=expect, HTTP_ACCEPT=accept)
@@ -46,30 +46,92 @@ class TestController(unittest.TestCase):
 
         _run_test("text/plain", "{None: False, 1: '2', 'ab': 'C'}")
 
+    def test_auto_decorator_with_params(self):
+        expected = {'ab':"C",1:"2",None:False}
+
+        def _run_test(expect, **kwargs):
+            class TestDecoratorWithParamsController(ActionController):
+                @auto(yaml_default_flow_style=True)
+                def test_action(self, request):
+                    return expected
+            self._request_and_test(TestDecoratorWithParamsController, "test_action",
+                                   HTTP_ACCEPT="application/yaml",
+                                   expected_response=expect)
+
+        _run_test(yaml.dump(expected,default_flow_style=True))
+
     def test_json_decorator(self):
         expected = {'ab':"C",1:"2",None:False}
 
         def _run_test(expect, **kwargs):
-            class TestTestController(ActionController):
-                @json_action
+            class TestJSONDecoratorController(ActionController):
+                @json_action()
                 def test_action(self, request):
                     return expected
-            self._request_and_test(TestTestController, "test_action", expected_response=expect)
+            self._request_and_test(TestJSONDecoratorController, "test_action", expected_response=expect)
 
         _run_test(json.dumps(expected))
+
+    def test_redirect_action(self):
+
+        class RedirectController(ActionController):
+            @json_action()
+            def second_action(self, request):
+                return {}
+            def redirect(self, request):
+                return self._go(to_url="/temporary/")
+            def redirect_permanent(self, request):
+                return self._go(to_url="/permanent/", permanent=True)
+
+        rf =  RequestFactory()
+        request = rf.get('/redirecting/')
+        controller = RedirectController(site=None, request=request, helper_class=None, url_params=None)
+        with self.subTest('302'):
+            response = controller._call_action('redirect')
+            self.assertEquals(response.status_code, 302)
+            self.assertEquals(response['Location'], "/temporary/")
+        with self.subTest('301'):
+            response = controller._call_action('redirect_permanent')
+            self.assertEquals(response.status_code, 301)
+            self.assertEquals(response['Location'], "/permanent/")
+
 
     def test_yaml_decorator(self):
         expected = {'ab':"C",1:"2",None:False}
 
         def _run_test(expect, **kwargs):
-            class TestTestController(ActionController):
+            class TestYamlDecoratorController(ActionController):
                 yaml_default_flow_style=True
-                @yaml_action
+                @yaml_action()
                 def test_action(self, request):
                     return expected
-            self._request_and_test(TestTestController, "test_action", expected_response=expect)
+            self._request_and_test(TestYamlDecoratorController, "test_action", expected_response=expect)
 
         _run_test(yaml.dump(expected,default_flow_style=True))
+
+    def test_yaml_decorator_with_flow_style(self):
+        expected = {'ab':"C",1:"2",None:False}
+
+        def _run_test(expect, **kwargs):
+            class TestYamlWithFlowController(ActionController):
+                @yaml_action(default_flow_style=True)
+                def test_action(self, request):
+                    return expected
+            self._request_and_test(TestYamlWithFlowController, "test_action", expected_response=expect)
+
+        _run_test(yaml.dump(expected,default_flow_style=True))
+
+    def test_yaml_decorator_with_flow_style_false(self):
+        expected = {'ab':"C",1:"2",None:False}
+
+        def _run_test(expect, **kwargs):
+            class TestYamlDecoWithFalseFlowController(ActionController):
+                @yaml_action(default_flow_style=False)
+                def test_action(self, request):
+                    return expected
+            self._request_and_test(TestYamlDecoWithFalseFlowController, "test_action", expected_response=expect)
+
+        _run_test(yaml.dump(expected,default_flow_style=False))
 
 if __name__ == '__main__':
     unittest.main()
