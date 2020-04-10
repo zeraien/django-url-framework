@@ -5,3 +5,4 @@ MANIFEST
 django_url_framework.egg-info/
 duf_test/
 env-test/
+_build/
