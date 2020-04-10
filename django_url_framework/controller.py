@@ -231,7 +231,7 @@ class ActionController(object):
 
     ActionControllers can have the following attributes:
 
-        urlconf_prefix
+        urlconf_prefix:list
                 Set a prefix for all urls in the controller
 
         consume_urlconf_keyword_arguments
@@ -270,6 +270,10 @@ class ActionController(object):
 
         json_default_encoder
                 Allows you to specify a custom JSON encoder class for all json encoding
+
+        use_inflection_library
+                Use this to convert controller class names using a new method, with the `inflection` library.
+                This will become the default after 2021. You can also set it as a global default in Site.autodiscover
 
     Actions can be decorated with a number of features and settings, such as different names, urls and http method access rules.
     See the `django_url_framework.decorators` package.
@@ -337,16 +341,9 @@ class ActionController(object):
 
     def _call_action(self, action_name, *args, **kwargs):
         """
-        The flow of calls:
-        * _call_action
-            * _view_wrapper
-                * __wrap_before_filter + __wrap_after_filter
-                * __wrap_after_filter
-
-
         :param action_name:
         :param args:
-        :param kwargs:
+        :param kwargs: the kwargs parsed from the URL
         :return:
         """
         if action_name in self._actions:
