@@ -1,5 +1,7 @@
 The django-url-framework will help you get your django applications done faster.
 
+[![Documentation Status](https://readthedocs.org/projects/django-url-framework/badge/?version=latest)](https://django-url-framework.readthedocs.io/en/latest/?badge=latest)
+
 [![Join the chat at https://gitter.im/zeraien/django-url-framework](https://badges.gitter.im/zeraien/django-url-framework.svg)](https://gitter.im/zeraien/django-url-framework?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 It automatically detects urls in a django application, similar to the way Ruby on Rails does it with the Controller-Action-View implementation.
@@ -39,7 +41,7 @@ import django_url_framework
 from django.conf import settings
 from django.conf.urls import patterns, include
 
-django_url_framework.site.autodiscover(settings.INSTALLED_APPS)
+django_url_framework.site.autodiscover(new_inflection_library=True)
 
 urlpatterns = patterns('',
     (r'^', include(django_url_framework.site.urls) ),
@@ -60,7 +62,7 @@ project/
               add.html
               index.html
               remove.html
-           foo/
+           id_manager/
               bar.html
 ```
 
@@ -81,7 +83,7 @@ class CartController(ActionController):
 ```python
 from django_url_framework.controller import ActionController
 
-class FooController(ActionController):
+class IDManagerController(ActionController):
     def index(self, request, object_id = None):
         return {}
     def bar(self, request):
@@ -116,10 +118,67 @@ There is also a helper tag for faster linking within the same controller.
 The controller name is derived from it's class name, by converting camelcase into underscores.
 For instance `FooController` is simple `foo`, while `FooBarController` becomes `foo_bar`.
 
+The latest version uses the `inflection` library, however to avoid breaking old code, this is still optional until 2021.
+
+The biggest difference is that with `inflection`, `HTTPResponse` becomes `http_response`, while the old name would be `httpresponse`. I suggest enabling the `inflection` library for all new and existing projects. You can manually specify names for controllers whose name change would break your code, or disable the inflection library for those controllers using a flag.
+
 You can give the controller a custom name with the `controller_name` parameter:
 ```python
 class Controller(ActionController):
   controller_name = "foo"
+```
+
+Enable or disable the use of the new `inflection` library using a flag
+```python
+class Controller(ActionController):
+  use_inflection_library = True
+```
+
+### Other useful controller settings
+
+```python
+class BarController(ActionController):
+    
+    # default filename extension for all templates
+    template_extension = "pug" 
+    
+    # will require every template file to start with this string
+    template_prefix = "foo_" 
+    
+    # will not look for templates in subdirectories, but in the root templates/ folder
+    no_subdirectories = False 
+    
+    # do not prefix templates with `_` (underscore) when they are called using an AJAX request
+    no_ajax_prefix = False 
+
+    # Set a prefix for the controller's name, applies even if
+    # you set controller_name (template name is based on controller_name, sans prefix)
+    # NOTE: The urlconf name will not include the prefix, only the actual URL itself
+    # Thus: FooController.list will have the URL /prefixed_foo/list/, but the url name will be
+    # `foo_list`.
+    controller_prefix = "prefixed_" 
+    
+    # completely override the name of the controller
+    controller_name = "shopping_cart" 
+
+    # When used with custom urlconf in actions, these arguments will not be passed to the action
+    # example: "/<id:int>/<skip:bool>/" Only `id` will be passed to the `action`, while `skip` will not be.
+    consume_urlconf_keyword_arguments = ['skip']
+
+    # set a prefix for all the URLs in this controller
+    # So, what normally would be `/controller/action/`, becomes `^prefix/controller/action/`
+    urlconf_prefix:list = ["^prefix"]
+
+    # A custom json encoder, subclassing JSONEncoder 
+    json_default_encoder:JSONEncoder = None
+
+    # use the yaml default flow style
+    yaml_default_flow_style:bool = True
+
+    # use the new inflection library to generate controller url
+    # if this is None, will use the global setting, otherwise override this on a per controller basis
+    use_inflection_library:Union[bool,None] = None
+
 ```
 
 ### Template filenames
@@ -221,6 +280,20 @@ Results in:
 /controller/action/(\w+)/  <--- optional argument consisting of A-Za-z0-9_
 ```
 
+### Decorate for JSON, YAML or Automatic
+
+You can decorate any action to have a default renderer.
+Instead of using `self._as_json` as before, you can just put a decorator like so:
+
+```python
+from django_url_framework.decorators import json_action
+    @json_action(json_encoder=None)
+    def action(self, request, year, month):
+        ...
+        return {}
+```
+
+
 ### Decorate for custom parameters
 
 You can also create your own custom parameters by using the `@url_parameters` decorator to the function.
@@ -271,7 +344,7 @@ This URL would not actually work since the `year` argument is required the `acti
 
 ## Flash messages
 
-The ActionController also has a _flash instance variable that allows you to send messages to the user that can survive a redirect. Simply use 
+The ActionController also has a `_flash` instance variable that allows you to send messages to the user that can survive a redirect. Simply use 
 
 ```python
 self._flash.append("Message")
