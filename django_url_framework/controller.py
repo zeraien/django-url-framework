@@ -490,15 +490,20 @@ class ActionController(object):
                 return before_filter_response
 
             # run the actual action
-            renderer, status_code = self.__run_action(action_func=action_func, renderer_args=send_args, *args, **kwargs)
+            renderer = self.__run_action(action_func=action_func, renderer_args=send_args, *args, **kwargs)
             if issubclass(renderer.__class__, HttpResponse):
                 return renderer
+
+            try:
+                renderer.update(self._template_context)
+            except Exception as e:
+                raise ValueError("Error applying before_filter data to action: %s." % e)
 
             after_filter_response = self.__run_after_filter(renderer=renderer, action_func=action_func)
             if issubclass(after_filter_response.__class__,HttpResponse):
                 return after_filter_response
 
-            self._response.status_code = status_code
+            self._response.status_code = renderer.status_code
 
         except Exception as exception:
             response = self._on_exception(request=self._request, exception=exception)
@@ -540,18 +545,17 @@ class ActionController(object):
             return action_response
         #######################################################
 
-        # check if action returns tuple, second part of tuple is the status code, if not 200
-        status_code = 200
-        if isinstance(action_response, tuple) and len(action_response)==2 and isinstance(action_response[1],int):
-            action_response, status_code = action_response
+        action_response, status_code = self.__split_action_status_and_result(action_response, default_status_code=200)
 
         if issubclass(action_response.__class__, Renderer):
             renderer = action_response
+            if renderer.status_code is None:
+                renderer.status_code = status_code
         else:
-            renderer = self._get_renderer_for_request(data=self._template_context, **renderer_args)
+            renderer = self._get_renderer_for_request(data=action_response, status_code=status_code, **renderer_args)
             renderer.update(action_response)
 
-        return renderer, status_code
+        return renderer
 
     def __run_before_filter(self, action_func) -> Union[HttpRequest,None]:
         """
@@ -571,7 +575,11 @@ class ActionController(object):
             self._before_filter_runonce = True
 
             filter_response = self._before_filter(self._request)
-            
+
+            if issubclass(filter_response.__class__, Renderer):
+                renderer = filter_response
+                filter_response = renderer.render(self)
+
             if issubclass(filter_response.__class__, dict):
                 self._template_context.update(filter_response)
             elif issubclass(filter_response.__class__,HttpResponse):
@@ -582,6 +590,7 @@ class ActionController(object):
     def __run_after_filter(self, action_func, renderer:Renderer)-> Union[HttpResponse, None]:
         if not getattr(self, '_after_filter_runonce', False) and not getattr(action_func,'disable_filters', False):
             self._after_filter_runonce = True
+            self._template_context = renderer.get_context()
             filter_response = self._after_filter(request=self._request)
 
             if issubclass(filter_response.__class__,HttpResponse):
@@ -595,23 +604,55 @@ class ActionController(object):
         return None
 
             
-    def _before_filter(self, request) -> Union[None,dict,HttpResponse]:
+    def _before_filter(self, request) -> Union[None,dict,HttpResponse,Renderer]:
         """If overridden, runs before every action.
-        
+        This method is useful to add some additional data to all your actions, set instance variables and
+        also verify a user's access to all actions in this controller.
+
         Code example:
+        {{{
+            @login_required
+            def _before_filter(self):
+                self.my_items = Item.objects.filter(user=request.user)
+                return {
+                    "page_title": "Item Page"
+                }
+            def get_item(self, request, pk):
+                item = get_object_or_404(self.my_items, pk=pk)
+                return {"item":item}
+        }}}
+
         {{{
             def _before_filter(self):
                 if self._action_name != 'login' and not self._request.user.is_authenticated:
                     return self._redirect(action='login')
                 return None
         }}}
+        :return: Either a dictionary with new data to add to the context, or an HttpResponse that will immediately be returned, without touching the `action` code.
+
         """
         return None
         
     def _after_filter(self, request):
+        """
+        This method is called after the actual `action` function has executed, and can be used to
+        massage data returned by the `action` or add new data. The _after_filter function has access
+        to data returned by the `action` through the `self._template_context` variable.
+        :param request:
+        :return:
+        """
         return None
-    def _before_render(self, request = None):
+
+    def _before_render(self, request):
+        """
+        This function is currently not in use at all, and it will probably disappear.
+        I guess the idea was to do something just before the renderer fires, but that seems
+        to be what `_after_filter` does.
+        :param request:
+        :return:
+        """
         return None
+
     def _on_exception(self, request, exception) -> Union[None,dict,HttpResponse]:
         """Can be overriden to handle uncaught exceptions.
         
@@ -635,48 +676,43 @@ class ActionController(object):
                 charset = self._response.charset
             self._response['Content-Type'] = "%s; charset=%s" % (mimetype, charset)
 
+    @staticmethod
+    def __split_action_status_and_result(result, default_status_code=None):
+        """
+        If an action returns a tuple of 2 values with the second value being an integer.
+        :param result:
+        :param default_status_code:
+        :return:
+        """
+        status_code = default_status_code
+        if isinstance(result, tuple) and len(result)==2 and isinstance(result[1],int):
+            result, status_code = result
+        return result, status_code
+
     def _as_auto_response(self, data, **kwargs):
         """determine the renderer from the requests' Accept: header"""
         return self._get_renderer_for_request(data, **kwargs)
 
-    def _as_json(self, data, status_code = 200, charset=default_charset, json_encoder=json_default_encoder, default=None, **kwargs):
+    def _as_json(self, data, status_code=None, charset=default_charset, json_encoder=json_default_encoder, default=None, **kwargs):
         """Render the returned dictionary as a JSON object. Accepts the json.dumps `default` argument for a custom encoder."""
         if default:
             class CustomJSONEncoder(JSONEncoder):
                 pass
             CustomJSONEncoder.default = default
             json_encoder = CustomJSONEncoder
-        return JSONRenderer(data, json_default_encoder=json_encoder, charset=charset), status_code
 
-    def _as_yaml(self, data, default_flow_style=yaml_default_flow_style, status_code = 200, **kwargs):
+        data, status_code = self.__split_action_status_and_result(data, status_code)
+
+        return JSONRenderer(data, json_default_encoder=json_encoder, charset=charset, status_code=status_code)
+
+    def _as_yaml(self, data, default_flow_style=yaml_default_flow_style, status_code=None, **kwargs):
         """Render the returned dictionary as a YAML object."""
-        return YAMLRenderer(data=data, default_flow_style=default_flow_style, charset=kwargs.pop('charset', default_charset)), status_code
+        data, status_code = self.__split_action_status_and_result(data, status_code)
+        return YAMLRenderer(data=data, default_flow_style=default_flow_style, charset=kwargs.pop('charset', default_charset), status_code=status_code)
 
-
-    def __wrapped_json(self, data, mimetype= "application/json", charset=default_charset):
-        self._before_render(request=self._request)
-        self._set_mimetype(mimetype=mimetype, charset=charset)
-
-        try:
-            import simplejson as json
-        except ImportError:
-            import json
-
-        self._template_context = data
-        self._response.content = json.dumps(self._template_context, default=self._json_default)
-        return self._response
-
-    def __wrapped_print(self, text, mimetype = 'text/plain', charset=default_charset, status_code=200):
-        """Print the returned string as plain text."""
-        self._before_render(request=self._request)
-        self._set_mimetype(mimetype=mimetype, charset=charset)
-
-        self._response.content = text
-        return self._response        
-
-    def _print(self, text, mimetype = 'text/plain', charset=default_charset, **kwargs):
-        return TextRenderer(data=text, mimetype=mimetype, charset=charset)
-        # return self.__wrap_after_filter(self.__wrapped_print, text=text, mimetype=mimetype, charset=charset, **kwargs)
+    def _print(self, text, mimetype = 'text/plain', charset=default_charset):
+        text, status_code = self.__split_action_status_and_result(text)
+        return TextRenderer(data=text, mimetype=mimetype, charset=charset, status_code=status_code)
 
     def _get_flash(self):
         if self._flash_cache is None:
@@ -717,7 +753,7 @@ class ActionController(object):
         return template_name
         
     
-    def __wrapped_render(self, dictionary=None, *args, **kwargs):
+    def _render(self, dictionary=None, mimetype="text/html", charset=default_charset, **kwargs):
         """
             Render the provided dictionary using the default template for the given action.
             The keyword argument 'mimetype' may be used to alter the response type.
@@ -725,24 +761,8 @@ class ActionController(object):
             The template context will be populated with the following data:
             request, controller_name, controller_actions (all actions), action_name (current_action), controller_helper, flash (flash messages)
         """
-        self._template_context.update(dictionary)
-
-        if getattr(self, '_before_render_runonce', False) == False and getattr(self._action_func,'disable_filters', False) == False:
-            self._before_render_runonce = True
-            before_render_response = self._before_render(request=self._request)
-            if isinstance(before_render_response, dict):
-                self._template_context.update(before_render_response)
-            elif before_render_response is not None:
-                return before_render_response
-
-        # todo used to populate xheaders for debugging purposes
-        # obj = getattr(self, '_object',None)
-        # if obj is not None:
-        #     populate_xheaders(self._request, self._response, obj.__class__, obj.pk)
-
-        return TemplateRenderer(data=dictionary, **kwargs)
-    
-    _render = __wrapped_render
+        data, status_code = self.__split_action_status_and_result(dictionary)
+        return TemplateRenderer(data=dictionary, mimetype=mimetype, charset=charset, status_code=status_code, **kwargs)
 
     def _redirect(self, to_url = None, controller = None, action = None, named_url  = None, url_params = None, url_args=None, url_kwargs=None, permanent=False, **kwargs):
         """

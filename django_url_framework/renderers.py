@@ -7,10 +7,14 @@ from django.http import HttpResponseRedirect, HttpResponsePermanentRedirect
 
 default_charset = "utf8"
 class Renderer(ABC):
-    def __init__(self, data, mimetype=None, charset=default_charset, **kwargs):
+    def __init__(self, data, mimetype=None, charset=default_charset, status_code=200, **kwargs):
         self._data = data
         self.mimetype=mimetype
         self.charset=charset
+        self.status_code=status_code
+
+    def get_context(self):
+        return self._data
 
     @abstractmethod
     def render(self, controller:'django_url_framework.controller.ActionController')->str:
@@ -19,7 +23,8 @@ class Renderer(ABC):
     def update(self, data)->None:
         if isinstance(data,dict):
             self._data.update(data)
-        raise ValueError("expecting a dictionary")
+        else:
+            raise ValueError("expecting a dictionary")
 
 class TemplateRenderer(Renderer):
     def __init__(self, data, template_name=None, **kwargs):
@@ -67,6 +72,8 @@ class TextRenderer(Renderer):
     def __init__(self, data, mimetype="text/plain", **kwargs):
         super(TextRenderer, self).__init__(data=data, mimetype=mimetype, **kwargs)
     def render(self,  controller):
+        if isinstance(self._data,str):
+            return self._data
         return pprint.pformat(self._data)
 
     def update(self, data):
@@ -106,6 +113,9 @@ class RedirectRenderer(Renderer):
         self.permanent=permanent
         self.to_url = to_url
         super(RedirectRenderer, self).__init__(data=None,**kwargs)
+
+    def update(self, data) -> None:
+        pass #noop
 
     def render(self, controller):
         if self.permanent:
