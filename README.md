@@ -381,7 +381,6 @@ class AccountController(ActionController):
           self._campaign = Campaign.objects.get(pk=campaign_id)
         except Campaign.DoesNotExist:
           self._campaign = None
-
 ```
 
 You can disable the before and after filters by decorating any action with the `@disable_filters` decorator.
@@ -424,6 +423,28 @@ class AccountController(ActionController):
 By default, the path that the user should be redirected to upon successful authentication is stored in a query string parameter called "next". If you would prefer to use a different name for this parameter, `login_required()` takes an optional `redirect_field_name` parameter.
 
 Additionally you can use `@superuser_required`, `@permission_required(permission_instance)` and `@must_be_member_of_group(group_name="some_group")`.
+
+Another example makes it easy to limiting access to a subset of data based on the logged in user for the whole controller.
+
+```python
+from django_url_framework.decorators import login_required
+class ItemController(ActionController):
+    @login_required()
+    def _before_filter(self):
+        self.my_items = Item.objects.filter(user=request.user)
+        self.my_products = Product.objects.filter(item__in=self.my_items)
+        return {
+            "page_title": "Item Page"
+        }
+    def item(self, request, pk):
+        item = get_object_or_404(self.my_items, pk=pk)
+        return {"item":item}
+    def product(self, request, pk):
+        item = get_object_or_404(self.my_products, pk=pk)
+        return {"product":product}
+
+
+```
 
 ## Only POST? (or GET or anything...)
 You can limit what http methods a function can be called with.
