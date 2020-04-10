@@ -516,6 +516,9 @@ class ActionController(object):
                 self._response.status_code = 500
 
         rendered_response = renderer.render(self)
+        if issubclass(rendered_response.__class__,HttpResponse):
+            return rendered_response
+
         self._set_mimetype(mimetype=renderer.mimetype, charset=renderer.charset)
         self._response.content = rendered_response
         return self._response
