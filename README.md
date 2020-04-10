@@ -56,7 +56,7 @@ urlpatterns = patterns('',
 project/
   app/
       cart_controller.py
-      foo_controller.py
+      id_controller.py
       templates/
            cart/
               add.html
@@ -66,7 +66,7 @@ project/
               bar.html
 ```
 
-### cart_controller.py & foo_controller.py
+### cart_controller.py 
 
 ```python
 from django_url_framework.controller import ActionController
@@ -79,6 +79,8 @@ class CartController(ActionController):
     def index(self, request):
       return {}
 ```
+
+### id_controller.py
 
 ```python
 from django_url_framework.controller import ActionController
@@ -112,6 +114,8 @@ You can easily access your URLs using django's built-in `{% url ... %}` tag. Sim
 
 There is also a helper tag for faster linking within the same controller.
 `{% go_action remove %}` will take you to `/cart/remove/`. To use it, `{% load url_framework %}` in your templates.
+
+The names of the controller files do not affect your URLs, however, the files must have `_controller.py` suffix. The URL name of the controller is derived from the class name, minus the Controller part. You can also manually specify controller names using the `controller_name` attribute on the controller class.
 
 ### Controller names
 
