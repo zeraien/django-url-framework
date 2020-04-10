@@ -292,7 +292,38 @@ from django_url_framework.decorators import json_action
         ...
         return {}
 ```
+Other decorators include `@yaml_action(default_flow_style:bool)` and `@auto()`.
+YaML is self-explanatory, however `@auto` is a bit interesting, it will automatically determine the renderer based on the `HTTP_ACCEPT` header. 
 
+*Warning* - if you expose raw data in your actions, that normally would be massaged inside a Server-Side template, DO NOT USE the `@auto` decorator as this allows an attacker to download raw data from your server.
+However, if your responses are designed for an API, the `@auto` decorator will enable the API client to request data as it sees fit, for example, it can request a Server-Side rendered HTML, or the same data as JSON or YaML.
+
+Here is a list of supported renderers:
+- text/html - `TemplateRenderer` - renders using the appropriate Django template
+- text/plain - `TextRenderer` - prints text data as is, or prints object types using `pprint.pformat`
+- application/json - `JSONRenderer` - renders data as JSON
+- application/yaml - `YamlRenderer` - renders data as YaML
+
+`@auto()` accepts the following parameters:
+- json_encoder
+- yaml_default_flow_style
+The work the same as if passed to `@json_action()` or `@yaml_action()`
+
+### Set HTTP Status Codes easily
+
+Any action can return a tuple of two items, the second item should be an `int` and will become the HTTP status code for your response.
+
+```python
+    @json_action()
+    def update(self, request, year, month):
+        ...
+        return False, 304 #not modified
+
+    @json_action()
+    def create(self, request, year, month):
+        ...
+        return True, 201 #created
+```
 
 ### Decorate for custom parameters
 

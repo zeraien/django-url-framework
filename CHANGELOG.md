@@ -13,4 +13,5 @@
 - `use_inflection_library` for `ActionController`, if set to `None`, allows the `Site` to control it, oterwise the controller can override the `Site` setting.
 - `yaml_default_flow_style` - If you want collections to be always serialized in the block style, set to False
 - `json_default_encoder` - Set your custom JSONEncoder class
-- Return a 2 item tuple from any `action` with the second item being the desired status code.
+-  Return a 2 item tuple from any `action` with the second item being the desired status code. *Warning: Potentially breaking change*
+ 
