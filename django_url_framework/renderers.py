@@ -64,7 +64,7 @@ class TemplateRenderer(Renderer):
         })
 
 
-        return  loader.render_to_string(template_name=self.get_template_name(),
+        return  loader.render_to_string(template_name=self.get_template_name(controller=controller),
                                          context=self._data,
                                          request=controller._request)
 
