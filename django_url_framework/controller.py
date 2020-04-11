@@ -60,7 +60,7 @@ def autoview_function(site:'django_url_framework.site.Site', request, controller
                 for kwarg in controller_class.consume_urlconf_keyword_arguments:
                     if kwarg in kwargs:
                         del(kwargs[kwarg])
-            return controller_class(site=site, request=request, helper=helper, url_params=kwargs_all)._call_action(action_name, *args, **kwargs)
+            return controller_class(site=site, request=request, helper_class=helper, url_params=kwargs_all)._call_action(action_name, *args, **kwargs)
         else:
             raise InvalidActionError(action_name)
         # else:
@@ -109,7 +109,11 @@ def get_controller_urlconf(controller_class:'ActionController.__class__', site=N
         """Wrapper for the function called by the url."""
         def wrapper(*args, **kwargs):
             request, args = args[0], args[1:]
-            return autoview_function(site, request, _controller_name, controller_class, _action_name, *args, **kwargs)
+            return autoview_function(site=site,
+                                     request=request,
+                                     controller_name=_controller_name,
+                                     controller_class=controller_class,
+                                     action_name=_action_name, *args, **kwargs)
         return wraps(_action_func)(wrapper)
 
     for action_name, action_func in list(actions.items()):
