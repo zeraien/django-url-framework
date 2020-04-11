@@ -17,9 +17,9 @@ class TestController(unittest.TestCase):
             request = rf.get('/test/json/', **headers)
 
             response = ControllerKlass(site=None, request=request, helper_class=None, url_params=None)._call_action(action_name)
-            self.assertEquals(response.status_code, status_code)
+            self.assertEqual(response.status_code, status_code)
             if expected_response:
-                self.assertEquals(response.content.decode('utf8').strip(), expected_response.strip())
+                self.assertEqual(response.content.decode('utf8').strip(), expected_response.strip())
             return response
 
     def test_default_renderer_template(self):
@@ -87,7 +87,7 @@ class TestController(unittest.TestCase):
             def test_action(self, request):
                 return returned
         response = self._request_and_test(TestPrintController, "test_action", status_code=302)
-        self.assertEquals(response['Location'], "/baz/")
+        self.assertEqual(response['Location'], "/baz/")
 
     def test_before_filter_none(self):
         returned = {"foo":"bar"}
@@ -156,12 +156,12 @@ class TestController(unittest.TestCase):
         controller = RedirectController(site=None, request=request, helper_class=None, url_params=None)
         with self.subTest('302'):
             response = controller._call_action('redirect')
-            self.assertEquals(response.status_code, 302)
-            self.assertEquals(response['Location'], "/temporary/")
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response['Location'], "/temporary/")
         with self.subTest('301'):
             response = controller._call_action('redirect_permanent')
-            self.assertEquals(response.status_code, 301)
-            self.assertEquals(response['Location'], "/permanent/")
+            self.assertEqual(response.status_code, 301)
+            self.assertEqual(response['Location'], "/permanent/")
 
 
     def test_yaml_decorator(self):
@@ -251,8 +251,8 @@ class TestController(unittest.TestCase):
         request = rf.get('/three_three/')
         controller = TupleController(site=None, request=request, helper_class=None, url_params=None)
         response = controller._call_action('three_three')
-        self.assertEquals(response.status_code, 333)
-        self.assertEquals(response.content.decode('utf8'), json.dumps(expected))
+        self.assertEqual(response.status_code, 333)
+        self.assertEqual(response.content.decode('utf8'), json.dumps(expected))
 
     def test_as_json_tuple_response_status_code(self):
 
