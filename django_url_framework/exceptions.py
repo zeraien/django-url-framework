@@ -1,3 +1,5 @@
-class InvalidActionError(Exception): pass
-class InvalidControllerError(Exception): pass
-class MethodNotAllowed(Exception): pass
+class URLFrameworkError(Exception): pass
+class ConfigurationError(URLFrameworkError): pass
+class InvalidActionError(URLFrameworkError): pass
+class InvalidControllerError(URLFrameworkError): pass
+class MethodNotAllowed(URLFrameworkError): pass
