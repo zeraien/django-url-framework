@@ -1,6 +1,5 @@
 from __future__ import annotations
 import inspect
-import inflection
 from functools import wraps
 from json.encoder import JSONEncoder
 from typing import Union, Tuple, Iterable
@@ -29,6 +28,7 @@ def get_controller_name(controller_class:'ActionController.__class__', with_pref
     use_inflection_lib = getattr(controller_class,"use_inflection_library",False) #todo defaults to True in 2021
     if controller_name is None:
         if use_inflection_lib:
+            import inflection
             controller_name = re.sub(r"_controller$", "", inflection.underscore(controller_class.__name__))
         else:
             name_ = [controller_class.__name__[0]]
