@@ -1,4 +1,5 @@
 from __future__ import annotations
+import django_url_framework #for type hinting
 import inspect
 from functools import wraps
 from json.encoder import JSONEncoder

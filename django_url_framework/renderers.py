@@ -1,4 +1,5 @@
 from __future__ import annotations
+import django_url_framework #for type hinting
 
 import pprint
 from abc import ABC, abstractmethod
