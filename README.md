@@ -1,6 +1,6 @@
 The django-url-framework will help you get your django applications done faster.
 
-![django-url-framework](https://github.com/zeraien/django-url-framework/workflows/django-url-framework/badge.svg)
+![build](https://github.com/zeraien/django-url-framework/workflows/build/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/django-url-framework/badge/?version=latest)](https://django-url-framework.readthedocs.io/en/latest/?badge=latest)
 [![Join the chat at https://gitter.im/zeraien/django-url-framework](https://badges.gitter.im/zeraien/django-url-framework.svg)](https://gitter.im/zeraien/django-url-framework?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
