@@ -17,6 +17,7 @@ from django import VERSION
 if VERSION[:2]<(1,9):
     from django.conf.urls import patterns
 
+from .exceptions import ConfigurationError
 from .exceptions import MethodNotAllowed
 from .exceptions import InvalidActionError
 
@@ -296,6 +297,7 @@ class ActionController(object):
     json_default_encoder:JSONEncoder = None
     yaml_default_flow_style:bool = True
     use_inflection_library:Union[bool,None] = None
+    default_renderer = TemplateRenderer
 
     def __init__(self, site, request, helper_class, url_params):
         self._site = site
@@ -310,6 +312,9 @@ class ActionController(object):
         self._controller_name_sans_prefix = get_controller_name(self.__class__, with_prefix=False)
         self._flash_cache = None
         self._template_context = {}
+
+        if not issubclass(ActionController.default_renderer, Renderer):
+            raise ConfigurationError("Invalid `default_renderer`, must be subclass of `Renderer`.")
 
         if hasattr(self, 'ignore_ajax'):
             warnings.warn("ActionController.ignore_ajax is deprecated, remove 2017-01-01", DeprecationWarning)
@@ -392,23 +397,6 @@ class ActionController(object):
 
         renderer_klass = _renderers_for_contenttypes.get(content_type)
 
-        if not renderer_klass:
-            renderer_klass = TextRenderer
-
-        return self._instantiate_renderer(
-            renderer_klass=renderer_klass,
-            data=data,
-            **kwargs)
-
-    def _get_renderer_for_datatype(self, data, **kwargs):
-
-        _renderers_for_contenttypes = {
-            dict: TemplateRenderer,
-            str: TextRenderer,
-            int: JSONRenderer,
-            bool: JSONRenderer,
-        }
-        renderer_klass = _renderers_for_contenttypes.get(type(data))
         if not renderer_klass:
             renderer_klass = TextRenderer
 
@@ -556,7 +544,8 @@ class ActionController(object):
             if renderer.status_code is None:
                 renderer.status_code = status_code
         else:
-            renderer = self._get_renderer_for_request(data=action_response, status_code=status_code, **renderer_args)
+            #todo add a default renderer for the whole controller
+            renderer = ActionController.default_renderer(data=action_response, status_code=status_code, **renderer_args)
             renderer.update(action_response)
 
         return renderer
