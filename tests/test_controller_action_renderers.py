@@ -3,13 +3,11 @@ import unittest
 from io import BytesIO
 
 import yaml
-from django.conf import settings
 from django.http import HttpRequest
 from django.test import RequestFactory, SimpleTestCase
 from django.utils.encoding import force_bytes
 from django_url_framework.decorators import auto, json_action, yaml_action
 from django_url_framework.controller import ActionController
-settings.configure()
 
 class TestController(unittest.TestCase):
 
@@ -23,6 +21,16 @@ class TestController(unittest.TestCase):
             if expected_response:
                 self.assertEquals(response.content.decode('utf8').strip(), expected_response.strip())
             return response
+
+    def test_default_renderer_template(self):
+        action_response = {'data':'foo'}
+        class TestTemplateRendererController(ActionController):
+            def test_action(self, request):
+                return action_response
+        response = self._request_and_test(TestTemplateRendererController, "test_action",
+                               expected_response="HTML:{data}".format(**action_response))
+        self.assertEqual(response['Content-Type'],"text/html; charset=utf-8")
+
 
     def test_auto_json_yaml_str(self):
         expected = {'ab':"C",1:"2",None:False}
