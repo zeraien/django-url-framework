@@ -9,6 +9,7 @@ venv/
 _build/
 *.pyc
 .DS_Store
+.github/
 *.pyc
 .svn
 */.idea/workspace.xml
