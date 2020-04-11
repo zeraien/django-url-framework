@@ -1,5 +1,5 @@
 import unittest
-from os.path import dirname
+from os.path import dirname, join
 
 from django.conf import settings
 settings.configure(
@@ -7,7 +7,7 @@ settings.configure(
         {
             'BACKEND': 'django.template.backends.dummy.TemplateStrings',
             'APP_DIRS': False,
-            'DIRS': [dirname(__file__)]
+            'DIRS': [join(dirname(__file__),'templates')]
         },
     ]
 
