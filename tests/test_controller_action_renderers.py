@@ -31,6 +31,14 @@ class TestController(unittest.TestCase):
                                expected_response="HTML:{data}".format(**action_response))
         self.assertEqual(response['Content-Type'],"text/html; charset=utf-8")
 
+    def test_template_renderer_adds_request_to_template_context(self):
+        action_response = {'data':'foo'}
+        class TestTemplateRendererAddsRequestController(ActionController):
+            def test_has_request(self, request):
+                return action_response
+        response = self._request_and_test(TestTemplateRendererAddsRequestController, "test_has_request",
+                               expected_response="This template &lt;WSGIRequest: GET &#x27;/test/json/&#x27;&gt;")
+        self.assertEqual(response['Content-Type'],"text/html; charset=utf-8")
 
     def test_auto_json_yaml_str(self):
         expected = {'ab':"C",1:"2",None:False}
