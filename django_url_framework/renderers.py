@@ -51,7 +51,7 @@ class TemplateRenderer(Renderer):
 
     def render(self, controller):
         from django.template import loader
-        dictionary = None #fixme
+        dictionary = self._data
         if dictionary is None:
             dictionary = {}
 
