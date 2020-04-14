@@ -1,9 +1,14 @@
 from __future__ import annotations
+
+from types import FunctionType
+
+from django.urls import path
+
 import django_url_framework #for type hinting
 import inspect
 from functools import wraps
 from json.encoder import JSONEncoder
-from typing import Union, Tuple, Iterable
+from typing import Union, Tuple, Iterable, Optional
 
 from django.http import *
 import re
@@ -74,14 +79,43 @@ def autoview_function(site:'django_url_framework.site.Site', request, controller
 
     raise Http404(error_msg)
 
+def _is_action_func(action_func):
+    """
+    check that the function does not start with underscore and has request as it's second parameter
 
-def _get_arg_name_and_default(action_func):
+    :param action_func:
+    :return:
+    """
+    # if the passed function was wrapped with a decorator, let's make sure to get the actual function
+    while hasattr(action_func,"__wrapped__"):
+        action_func = action_func.__wrapped__
+    if not callable(action_func) or not isinstance(action_func, FunctionType):
+        return False
+
+    func_name = action_func.__name__
+    if re.match(r'^[_\-A-Z0-9]',func_name[0]):
+        return False
+
+    arg_spec = inspect.getfullargspec(action_func)
+    arguments = arg_spec.args
+    if len(arguments)>1 and arguments[1]=="request":
+        return True
+    return False
+
+def _get_urlconf_param_type(datatype:type):
+    if datatype is None or datatype not in (int,str):
+        p = "slug"
+    else:
+        p = datatype.__name__
+    return p
+
+def _get_arg_name_and_default(action_func)->Tuple[Optional[str],bool,Optional[type]]:
     """
     This extracts the 3rd argument of the provided function and checks if it has a default value.
     `def action(self, request, returns_this_name=?):`
 
     :param action_func: the function to extract from
-    :return: tuple with the argument name and a boolean of whether it has a default value or not
+    :return: tuple with the argument name and a boolean of whether it has a default value or not, as well as the datatype inferred from the annotation or `[\w-]` if the annotation is missing
     """
 
     # if the passed function was wrapped with a decorator, let's make sure to get the actual function
@@ -90,11 +124,15 @@ def _get_arg_name_and_default(action_func):
 
     arg_spec = inspect.getfullargspec(action_func)
     arguments = arg_spec.args
-    has_default = True
     if len(arguments) == 3:
         has_default = arg_spec.defaults and len(arg_spec.defaults) > 0
-        return arguments[2], has_default
-    return None, has_default
+        arg_name = arguments[2]
+        if arg_name in arg_spec.annotations:
+            datatype = arg_spec.annotations[arg_name]
+        else:
+            datatype = None
+        return arg_name, has_default, datatype
+    return None, True, None
 
 def url_patterns(*args):
     if VERSION[:2]>=(1,9):
@@ -138,10 +176,11 @@ def get_controller_urlconf(controller_class:'ActionController.__class__', site=N
             if action_name == 'index':
                 # No root URL is generated if we have no index action.
 
-                object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
+                object_id_arg_name, has_default, datatype = _get_arg_name_and_default(action_func)
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
-                    index_action_with_args_urlconf += url_patterns(url(r'^(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, view=wrapped_call, name=named_url))
+                    replace_dict['type'] = _get_urlconf_param_type(datatype)
+                    index_action_with_args_urlconf += url_patterns(path("<%(type)s:%(object_id_arg_name)s>/" % replace_dict, view=wrapped_call, name=named_url))
                 if has_default:
                     action_urlpatterns += url_patterns(url(r'^$', view=wrapped_call, name=named_url))
 
@@ -152,12 +191,13 @@ def get_controller_urlconf(controller_class:'ActionController.__class__', site=N
                     action_urlpatterns += url_patterns(url(r'^%(action)s/%(url_parameters)s$' % replace_dict, view=wrapped_call, name=named_url))
 
                 else:
-                    object_id_arg_name, has_default = _get_arg_name_and_default(action_func)
+                    object_id_arg_name, has_default, datatype = _get_arg_name_and_default(action_func)
                     if object_id_arg_name is not None:
                         replace_dict['object_id_arg_name'] = object_id_arg_name
-                        action_urlpatterns += url_patterns(url(r'^%(action)s/(?P<%(object_id_arg_name)s>[\w-]+)/$' % replace_dict, view=wrapped_call, name=named_url))
+                        replace_dict['type'] = _get_urlconf_param_type(datatype)
+                        action_urlpatterns += url_patterns(path('%(action)s/<%(type)s:%(object_id_arg_name)s>/' % replace_dict, view=wrapped_call, name=named_url))
                     if has_default:
-                        action_urlpatterns += url_patterns(url(r'^%(action)s/$' % replace_dict, view=wrapped_call, name=named_url))
+                        action_urlpatterns += url_patterns(path('%(action)s/' % replace_dict, view=wrapped_call, name=named_url))
 
         if urlconf_prefix:
             action_urlpatterns_with_prefix = url_patterns()
@@ -199,7 +239,7 @@ def get_actions(controller, with_prefix = True):
         actions = {}
         for func_name in dir(controller):
             func = getattr(controller,func_name)
-            if not re.match(r'^[_\-A-Z0-9]',func_name[0]) and callable(func):
+            if _is_action_func(action_func=func):
                 if hasattr(func, 'action_name'):
                     func_name = func.action_name
                 if with_prefix and hasattr(func, 'action_prefix'):
@@ -297,7 +337,7 @@ class ActionController(object):
     urlconf_prefix:list = None
     json_default_encoder:JSONEncoder = None
     yaml_default_flow_style:bool = True
-    use_inflection_library:Union[bool,None] = None
+    use_inflection_library:Optional[bool] = None
     default_renderer = TemplateRenderer
 
     def __init__(self, site, request, helper_class, url_params):
@@ -551,7 +591,7 @@ class ActionController(object):
 
         return renderer
 
-    def __run_before_filter(self, action_func) -> Union[HttpRequest,None]:
+    def __run_before_filter(self, action_func) -> Optional[HttpRequest]:
         """
         This calls `_before_filter` and updates the `template_context`.
         If the response from `_before_filter` is an `HttpResponse`, we return this
@@ -581,7 +621,7 @@ class ActionController(object):
 
         return None
 
-    def __run_after_filter(self, action_func, renderer:Renderer)-> Union[HttpResponse, None]:
+    def __run_after_filter(self, action_func, renderer:Renderer)-> Optional[HttpResponse]:
         if not getattr(self, '_after_filter_runonce', False) and not getattr(action_func,'disable_filters', False):
             self._after_filter_runonce = True
             self._template_context = renderer.get_context()
