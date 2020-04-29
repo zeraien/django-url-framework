@@ -5,9 +5,13 @@ pip install django-url-framework
 ```
    
 # setup.py
-To install on a *nix system type:
+To install on a *nix system, cd into the project folder and type:
 ```bash
-sudo python setup.py install
+python setup.py install
+```
+or
+```bash
+pip install .
 ```
 
 # manually
