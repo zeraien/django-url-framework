@@ -585,7 +585,6 @@ class ActionController(object):
             if renderer.status_code is None:
                 renderer.status_code = status_code
         else:
-            #todo add a default renderer for the whole controller
             renderer = ActionController.default_renderer(data=action_response, status_code=status_code, **renderer_args)
             renderer.update(action_response)
 

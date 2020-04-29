@@ -6,21 +6,12 @@ import yaml
 from django.http import HttpRequest
 from django.test import RequestFactory, SimpleTestCase
 from django.utils.encoding import force_bytes
+
+from .duf_test_case import DUFTestCase
 from django_url_framework.decorators import auto, json_action, yaml_action
 from django_url_framework.controller import ActionController
 
-class TestController(unittest.TestCase):
-
-    def _request_and_test(self, ControllerKlass, action_name, expected_response=None, status_code=200, **headers):
-        with self.subTest(**headers):
-            rf =  RequestFactory()
-            request = rf.get('/test/json/', **headers)
-
-            response = ControllerKlass(site=None, request=request, helper_class=None, url_params=None)._call_action(action_name)
-            self.assertEqual(response.status_code, status_code)
-            if expected_response:
-                self.assertEqual(response.content.decode('utf8').strip(), expected_response.strip())
-            return response
+class TestController(DUFTestCase):
 
     def test_default_renderer_template(self):
         action_response = {'data':'foo'}

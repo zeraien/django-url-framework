@@ -1,11 +1,17 @@
 from functools import wraps
 
+from django.http import HttpResponse
+
+
 def _action_renderer(renderer, **renderer_kwargs):
     def decorator(function):
         @wraps(function)
         def _wrapped_action(self, *args, **kwargs):
             """Wrapper for the function called by the url."""
-            return getattr(self,renderer)(function(self, *args, **kwargs), **renderer_kwargs)
+            response = function(self, *args, **kwargs)
+            if issubclass(response.__class__, HttpResponse):
+                return response
+            return getattr(self,renderer)(response, **renderer_kwargs)
         return _wrapped_action
     return decorator
 

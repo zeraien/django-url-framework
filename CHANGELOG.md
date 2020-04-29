@@ -3,6 +3,10 @@
 ## [Unreleased]
 - use of `inflection` library will be the default after 2021
 
+## [0.5.1] - 2020-04-29
+### Bugfix
+- Using `@json_action()` or `@yaml_action()` would crash if the action returns an HttpResponse and not serializable data.
+
 ## [0.5.0] - 2020-04-10
 ### Added
 - @auto() decorator, will render your `action` response based on the HTTP Accept header
@@ -14,4 +18,3 @@
 - `yaml_default_flow_style` - If you want collections to be always serialized in the block style, set to False
 - `json_default_encoder` - Set your custom JSONEncoder class
 -  Return a 2 item tuple from any `action` with the second item being the desired status code. *Warning: Potentially breaking change*
- 
