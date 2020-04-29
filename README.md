@@ -22,7 +22,7 @@ From pypi:
 pip install django-url-framework
 ```
 
-Alternatively just check out the source here and run `python setup.py install`
+Alternatively just check out the source here and run `python setup.py install` or `pip install .`
 
 ## Add to your project
 
