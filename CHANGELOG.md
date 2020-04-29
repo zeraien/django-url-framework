@@ -3,7 +3,7 @@
 ## [Unreleased]
 - use of `inflection` library will be the default after 2021
 
-## [0.5.1] - 2020-04-29
+## [0.5.2] - 2020-04-29
 ### Bugfix
 - Using `@json_action()` or `@yaml_action()` would crash if the action returns an HttpResponse and not serializable data.
 
