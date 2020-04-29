@@ -17,7 +17,7 @@ setup(
     author='Dimo Fedortchenko',
     author_email='d@angelhill.net',
     url='https://github.com/zeraien/django-url-framework/',
-    packages=find_packages(),
+    packages=[p for p in find_packages() if p!="tests"],
     classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',
