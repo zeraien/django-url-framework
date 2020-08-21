@@ -1,7 +1,7 @@
-from __future__ import annotations
 import json
 
 from django.core.serializers.json import DjangoJSONEncoder
+
 import django_url_framework #for type hinting
 
 import pprint
