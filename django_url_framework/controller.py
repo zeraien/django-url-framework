@@ -529,7 +529,10 @@ class ActionController(object):
                 return renderer
 
             try:
-                renderer.update(self._template_context)
+                renderer_context = renderer.get_context()
+                if isinstance(renderer_context,dict) and isinstance(self._template_context,dict):
+                    self._template_context.update(renderer.get_context())
+                    renderer.update(self._template_context)
             except Exception as e:
                 raise ValueError("Error applying before_filter data to action: %s." % e)
 
