@@ -1,4 +1,7 @@
 from __future__ import annotations
+import json
+
+from django.core.serializers.json import DjangoJSONEncoder
 import django_url_framework #for type hinting
 
 import pprint
@@ -93,7 +96,7 @@ class YAMLRenderer(Renderer):
 
 
 class JSONRenderer(Renderer):
-    def __init__(self, data, json_default_encoder=None, **kwargs):
+    def __init__(self, data, json_default_encoder=DjangoJSONEncoder, **kwargs):
         super(JSONRenderer, self).__init__(data=data, mimetype="application/json", **kwargs)
         self._json_default_encoder = json_default_encoder
 
@@ -102,11 +105,6 @@ class JSONRenderer(Renderer):
             super(JSONRenderer, self).update(data=data)
 
     def render(self, controller):
-        try:
-            import simplejson as json
-        except ImportError:
-            import json
-
         return json.dumps(self._data, cls=self._json_default_encoder)
 
 class RedirectRenderer(Renderer):

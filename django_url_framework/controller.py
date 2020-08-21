@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from types import FunctionType
 
+from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import path
 
 import django_url_framework #for type hinting
@@ -315,7 +316,7 @@ class ActionController(object):
                 Default: False
 
         json_default_encoder
-                Allows you to specify a custom JSON encoder class for all json encoding
+                Allows you to specify a custom JSON encoder class for all json encoding. Default is `DjangoJSONEncoder`
 
         use_inflection_library
                 Use this to convert controller class names using a new method, with the `inflection` library.
@@ -335,7 +336,7 @@ class ActionController(object):
     controller_name = None
     consume_urlconf_keyword_arguments:Iterable[str] = None
     urlconf_prefix:list = None
-    json_default_encoder:JSONEncoder = None
+    json_default_encoder:JSONEncoder = DjangoJSONEncoder
     yaml_default_flow_style:bool = True
     use_inflection_library:Optional[bool] = None
     default_renderer = TemplateRenderer
