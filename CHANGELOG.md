@@ -3,6 +3,13 @@
 ## [Unreleased]
 - use of `inflection` library will be the default after 2021
 
+## [0.5.3] - 2020-08-21
+### Functionality change `_before_filter`
+- When returning a `dict` from `_before_filter`, it would previously overwrite the `dict` returned from the actions themselves.
+New functionality is that dict keys returned by an action will overwrite dict keys returned by the `_before_filter`.
+- Default `JSONEncoder` is set to `DjangoJSONEncoder`.
+- Removed dependency on `simplejson`.
+
 ## [0.5.2] - 2020-04-29
 ### Bugfix
 - Using `@json_action()` or `@yaml_action()` would crash if the action returns an HttpResponse and not serializable data.
