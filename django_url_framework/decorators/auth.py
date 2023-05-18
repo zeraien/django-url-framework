@@ -5,7 +5,9 @@ except ImportError:
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.http import HttpResponseRedirect, HttpResponseForbidden
-from django.utils.http import urlquote
+from urllib.parse import quote
+
+from ..lib import is_ajax
 
 def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIELD_NAME):
     """
@@ -22,9 +24,9 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
         def _wrapped_view(self, request, *args, **kwargs):
             if test_func(request.user):
                 return view_func(self, request, *args, **kwargs)
-            path = urlquote(request.get_full_path())
+            path = quote(request.get_full_path())
             tup = login_url, redirect_field_name, path
-            if request.is_ajax():
+            if is_ajax(request):
                 return HttpResponseForbidden()
             else:
                 return HttpResponseRedirect('%s?%s=%s' % tup)

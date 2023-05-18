@@ -17,12 +17,10 @@ import sys
 
 import warnings
 
+from .lib import is_ajax
 from .renderers import JSONRenderer, YAMLRenderer, TextRenderer, TemplateRenderer, Renderer, RedirectRenderer
 from .helper import ApplicationHelper
-from django.conf.urls import url, include
-from django import VERSION
-if VERSION[:2]<(1,9):
-    from django.conf.urls import patterns
+from django.urls import re_path, include
 
 from .exceptions import ConfigurationError
 from .exceptions import MethodNotAllowed
@@ -135,17 +133,11 @@ def _get_arg_name_and_default(action_func)->Tuple[Optional[str],bool,Optional[ty
         return arg_name, has_default, datatype
     return None, True, None
 
-def url_patterns(*args):
-    if VERSION[:2]>=(1,9):
-        return list(args)
-    else:
-        return patterns('', *args)
-
 def get_controller_urlconf(controller_class:'ActionController.__class__', site=None):
     controller_name = get_controller_name(controller_class)
     actions = get_actions(controller_class)
-    urlpatterns = url_patterns()
-    urlpatterns_with_args = url_patterns()
+    urlpatterns = []
+    urlpatterns_with_args = []
     def wrap_call(_controller_name, _action_name, _action_func):
         """Wrapper for the function called by the url."""
         def wrapper(*args, **kwargs):
@@ -163,13 +155,13 @@ def get_controller_urlconf(controller_class:'ActionController.__class__', site=N
         replace_dict = {'action':action_name.replace("__","/")}
         wrapped_call = wrap_call(controller_name, action_name, action_func)
         urlconf_prefix = getattr(controller_class, 'urlconf_prefix', None)
-        action_urlpatterns = url_patterns()
-        index_action_with_args_urlconf = url_patterns()
+        action_urlpatterns = []
+        index_action_with_args_urlconf = []
 
         if hasattr(action_func, 'urlconf'):
             """Define custom urlconf patterns for this action."""
             for new_urlconf in action_func.urlconf:
-                action_urlpatterns += url_patterns(url(new_urlconf, view=wrapped_call, name=named_url))
+                action_urlpatterns.append(re_path(new_urlconf, view=wrapped_call, name=named_url))
 
         if not getattr(action_func, 'urlconf_erase', False):
             """Do not generate default URL patterns if we define 'urlconf_erase' for this action."""
@@ -181,41 +173,41 @@ def get_controller_urlconf(controller_class:'ActionController.__class__', site=N
                 if object_id_arg_name is not None:
                     replace_dict['object_id_arg_name'] = object_id_arg_name
                     replace_dict['type'] = _get_urlconf_param_type(datatype)
-                    index_action_with_args_urlconf += url_patterns(path("<%(type)s:%(object_id_arg_name)s>/" % replace_dict, view=wrapped_call, name=named_url))
+                    index_action_with_args_urlconf.append(path("<%(type)s:%(object_id_arg_name)s>/" % replace_dict, view=wrapped_call, name=named_url))
                 if has_default:
-                    action_urlpatterns += url_patterns(url(r'^$', view=wrapped_call, name=named_url))
+                    action_urlpatterns.append(path("", view=wrapped_call, name=named_url))
 
             else:
                 if hasattr(action_func, 'url_parameters'):
                     arguments = action_func.url_parameters
                     replace_dict['url_parameters'] = arguments
-                    action_urlpatterns += url_patterns(url(r'^%(action)s/%(url_parameters)s$' % replace_dict, view=wrapped_call, name=named_url))
+                    action_urlpatterns.append(path("%(action)s/%(url_parameters)s" % replace_dict, view=wrapped_call, name=named_url))
 
                 else:
                     object_id_arg_name, has_default, datatype = _get_arg_name_and_default(action_func)
                     if object_id_arg_name is not None:
                         replace_dict['object_id_arg_name'] = object_id_arg_name
                         replace_dict['type'] = _get_urlconf_param_type(datatype)
-                        action_urlpatterns += url_patterns(path('%(action)s/<%(type)s:%(object_id_arg_name)s>/' % replace_dict, view=wrapped_call, name=named_url))
+                        action_urlpatterns.append(path('%(action)s/<%(type)s:%(object_id_arg_name)s>/' % replace_dict, view=wrapped_call, name=named_url))
                     if has_default:
-                        action_urlpatterns += url_patterns(path('%(action)s/' % replace_dict, view=wrapped_call, name=named_url))
+                        action_urlpatterns.append(path('%(action)s/' % replace_dict, view=wrapped_call, name=named_url))
 
         if urlconf_prefix:
-            action_urlpatterns_with_prefix = url_patterns()
+            action_urlpatterns_with_prefix = []
             for _urlconf in urlconf_prefix:
-                action_urlpatterns_with_prefix+=url_patterns(url(_urlconf, include(action_urlpatterns)))
-            urlpatterns+=action_urlpatterns_with_prefix
+                action_urlpatterns_with_prefix.append(re_path(_urlconf, include(action_urlpatterns)))
+            urlpatterns += action_urlpatterns_with_prefix
 
-            action_urlpatterns_with_args_with_prefix = url_patterns()
+            action_urlpatterns_with_args_with_prefix = []
             for _urlconf in urlconf_prefix:
-                action_urlpatterns_with_args_with_prefix+=url_patterns(url(_urlconf, include(action_urlpatterns_with_args_with_prefix)))
+                action_urlpatterns_with_args_with_prefix.append(re_path(_urlconf, include(action_urlpatterns_with_args_with_prefix)))
 
-            urlpatterns_with_args+=action_urlpatterns_with_args_with_prefix
+            urlpatterns_with_args += action_urlpatterns_with_args_with_prefix
         else:
-            urlpatterns+=action_urlpatterns
-            urlpatterns_with_args+=index_action_with_args_urlconf
+            urlpatterns += action_urlpatterns
+            urlpatterns_with_args += index_action_with_args_urlconf
 
-    return urlpatterns+urlpatterns_with_args
+    return urlpatterns + urlpatterns_with_args
 CACHED_ACTIONS = {}
 
 def get_action_name(func, with_prefix = False):
@@ -364,7 +356,7 @@ class ActionController(object):
         else:
             self._no_ajax_prefix = getattr(self, 'no_ajax_prefix', False)
 
-        self._is_ajax = request.is_ajax()
+        self._is_ajax = is_ajax(request)
         self._url_params = url_params
 
         self._template_extension = getattr(self, 'template_extension', 'html')

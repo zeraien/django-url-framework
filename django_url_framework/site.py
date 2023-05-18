@@ -4,17 +4,15 @@ import logging
 import re
 import os
 import importlib
-import importlib.util
 
 from django.apps import apps
 
 from .helper import ApplicationHelper
 from .controller import ActionController
-from .controller import url_patterns
 from .controller import get_controller_name
 from .controller import get_controller_urlconf
 
-from django.conf.urls import include, url
+from django.urls import include, path
 
 class Site(object):
     def __init__(self):
@@ -158,9 +156,15 @@ class Site(object):
                     found_controller[0].close()
             
     def _get_urls(self):
-        urlpatterns = url_patterns()
-        
+        urlpatterns = []
+
         for controller_name, controller_class in list(self.controllers.items()):
-            urlpatterns += url_patterns(url(r'^%(controller)s/' % {'controller':controller_name}, include(get_controller_urlconf(controller_class, site=self))))
-        return urlpatterns, None, 'django-url-framework'
+            urlpatterns.append(
+                path("%(controller)s/" % {'controller': controller_name},
+                     include(
+                         get_controller_urlconf(controller_class, site=self)
+                     )
+                 )
+            )
+        return urlpatterns, 'django-url-framework', None
     urls = property(_get_urls)

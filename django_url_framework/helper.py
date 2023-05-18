@@ -1,10 +1,6 @@
 from django.utils.http import urlencode
 
-#django <2 compat
-try:
-    from django.urls import reverse
-except ImportError:
-    from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from .exceptions import InvalidActionError
 from .exceptions import InvalidControllerError

@@ -18,11 +18,17 @@ def _action_renderer(renderer, **renderer_kwargs):
 def json_action(json_encoder=None):
     """
     Decorator that ensures any data returned from this function is encoded into JSON.
+    Usage: @json_action() or @json_action(json_encoder=CustomJsonEncoder)
     """
     return _action_renderer(json_encoder=json_encoder, renderer="_as_json")
 
 def yaml_action(default_flow_style=None):
+    """
+    Usage: @yaml_action() or @yaml_action(default_flow_style=True)
 
+    :param default_flow_style:
+    :return:
+    """
     return _action_renderer(default_flow_style=default_flow_style, renderer="_as_yaml")
 
 

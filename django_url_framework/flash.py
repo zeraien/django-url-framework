@@ -1,11 +1,11 @@
 from django.conf import settings
 import hashlib
-from django.utils.encoding import smart_text
+from django.utils.encoding import smart_str
 from django.utils.safestring import mark_safe
 
 class FlashMessage(object):
     def __init__(self, message, is_error=False, kind='normal'):
-        self.message = smart_text(message, encoding="utf8")
+        self.message = smart_str(message, encoding="utf8")
         self.is_error = is_error
         self.kind = kind
         self.digest = hashlib.sha1(self.message.encode('utf8') + kind.encode('utf8')).hexdigest()
@@ -77,7 +77,7 @@ class FlashManager(object):
     def append(self, msg, msg_type='normal'):
 
         new_message = FlashMessage(**{
-            'message': smart_text(msg, encoding="utf8"),
+            'message': smart_str(msg, encoding="utf8"),
             'kind': msg_type,
             'is_error': msg_type == 'error'
         })
